@@ -60,6 +60,26 @@ var SP_COMMENT_SELECTORS = [
   '[id*="comment"]',
 ].join(", ");
 
+// Known ad-network containers, stripped before Readability runs (and from
+// fallback renderings). Beyond wasting ink, a big injected ad unit inside
+// the article body drags down its Readability score enough to change which
+// container wins — pulling in header chrome and pruning real paragraphs
+// (seen on xda-developers). Selectors must be specific to ad tech: bare
+// substring matches on "ad" would hit words like "gradient" or "download".
+var SP_AD_SELECTORS = [
+  "ins.adsbygoogle",          // Google AdSense
+  '[id^="google_ads_"]',      // Google ad iframes/slots
+  '[id^="div-gpt-ad"]',       // Google Publisher Tag slots
+  '[data-google-query-id]',   // anything GPT has already filled
+  '[class*="adsninja"]',      // AdsNinja (xda-developers and friends)
+  '[id*="adsninja"]',
+  ".ad-zone",
+  ".ad-container",
+  ".ad-wrapper",
+  ".ad-slot",
+  "[data-ad-unit]",
+].join(", ");
+
 // Settings defaults — these five preferences are ALL we ever store.
 var SP_DEFAULT_SETTINGS = {
   fontSize: 11,       // pt, one of SP_FONT_SIZES

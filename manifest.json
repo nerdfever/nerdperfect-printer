@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NerdPerfect Printer",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "version_name": "1.01",
   "homepage_url": "https://nerdfever.com",
   "author": "nerdfever.com",
   "description": "Clean, readable printouts of web articles. Extracts the article, reflows it into a print-optimized layout, and prints — no clipped text, no ads, no overlays. All processing is local.",

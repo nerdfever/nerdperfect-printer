@@ -59,11 +59,35 @@
     }
   }
 
+  // Remove every element in a subtree matching a selector list.
+  function removeMatching(root, selectors) {
+    for (const el of root.querySelectorAll(selectors)) {
+      el.remove();
+    }
+  }
+
   // Safety-net comment stripping (full-article/fallback modes ONLY —
   // never for selections). Selector list lives in shared.js.
   function stripComments(root) {
-    for (const el of root.querySelectorAll(SP_COMMENT_SELECTORS)) {
-      el.remove();
+    removeMatching(root, SP_COMMENT_SELECTORS);
+  }
+
+  // Strip injected ad units (full-article/fallback modes only). Selector
+  // list lives in shared.js — see the note there on why ads must go
+  // BEFORE Readability, not just after.
+  function stripAds(root) {
+    removeMatching(root, SP_AD_SELECTORS);
+  }
+
+  // Strip blocks the page itself marks as non-content via data-nosnippet
+  // (author bios, byline chrome, sharing rails — XDA marks all of these).
+  // Size-guarded so a site that wraps its whole article in data-nosnippet
+  // (a paywall trick) loses nothing: only small blocks are removed.
+  function stripNoSnippet(root, pageTextLen) {
+    for (const el of root.querySelectorAll("[data-nosnippet]")) {
+      const textLen = (el.textContent || "").trim().length;
+
+      if (textLen < 0.2 * pageTextLen) el.remove();
     }
   }
 
@@ -100,15 +124,66 @@
   }
 
   // The page's reference body-text size, for spotting "small print".
+  // A single probe paragraph is too fragile: if the document's first <p>
+  // happens to be an oversized lede/deck, every normal paragraph looks
+  // "small" next to it and the whole article prints shrunken (seen on
+  // xda-developers). Instead, take the character-weighted median size
+  // across all paragraphs with substantial text.
   const baseFontPx = (() => {
-    const probe =
-      document.querySelector("article p, main p, p") || document.body;
-    return parseFloat(getComputedStyle(probe).fontSize) || 16;
+    // Gather (size, chars) samples from every paragraph with real text.
+    const samples = [];
+    for (const p of document.querySelectorAll("p")) {
+      const chars = (p.textContent || "").trim().length;
+      if (chars < 40) continue;
+
+      const size = parseFloat(getComputedStyle(p).fontSize);
+      if (size) samples.push({ size, chars });
+    }
+
+    // No usable paragraphs → fall back to a single probe, as before.
+    if (!samples.length) {
+      const probe =
+        document.querySelector("article p, main p, p") || document.body;
+      return parseFloat(getComputedStyle(probe).fontSize) || 16;
+    }
+
+    // Character-weighted median: the size in effect at the midpoint of
+    // the page's paragraph text — one oversized outlier can't drag it.
+    samples.sort((a, b) => a.size - b.size);
+
+    const half = samples.reduce((sum, s) => sum + s.chars, 0) / 2;
+    let seen = 0;
+    for (const s of samples) {
+      seen += s.chars;
+      if (seen >= half) return s.size;
+    }
+
+    // Unreachable (the loop always crosses the midpoint), but explicit.
+    return samples[samples.length - 1].size;
   })();
+
+  // Does the element directly contain rendered text of its own (not just
+  // text nested inside child elements)? Pure containers fail this test.
+  function hasOwnText(el) {
+    for (const node of el.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length >= 4) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 
   // Does the live element render as de-emphasized small print (author
   // bios, image credits, disclaimers)?
   function isSmallPrint(liveEl) {
+    // Only elements that render text of their own can be small print.
+    // Tagging a mere container would shrink every descendant through the
+    // `[data-sp-small] *` print rule — even paragraphs that override the
+    // size back UP (xda-developers puts 10px on its article containers
+    // while the paragraphs inside them are 18px).
+    if (!hasOwnText(liveEl)) return false;
+
     const size = parseFloat(getComputedStyle(liveEl).fontSize);
     return Boolean(size) && size <= baseFontPx * 0.82;
   }
@@ -177,6 +252,10 @@
     // mistake a huge comment thread for article content.
     stripComments(docClone);
 
+    // Strip injected ad units, also before Readability — left in place,
+    // a big ad inside the article body skews the scoring (see shared.js).
+    stripAds(docClone);
+
     // Readability's junk heuristics discard containers whose text is mostly
     // links — which describes image credits like "Photo by X on Unsplash",
     // and takes the whole figure (image included) down with them. Unwrap
@@ -196,6 +275,10 @@
     // Text length of the cleaned, comment-stripped page, captured before
     // Readability mutates the clone (needed for the sliver check below).
     const pageTextLen = (docClone.body ? docClone.body.textContent : "").trim().length;
+
+    // Drop what the page itself marks as non-content (needs pageTextLen
+    // for its size guard, so it runs after the measurement).
+    stripNoSnippet(docClone, pageTextLen);
 
     // Run Readability; treat any exception as a parse failure.
     let article = null;
@@ -226,6 +309,7 @@
     const holder = document.createElement("template");
     holder.innerHTML = article.content;
     stripComments(holder.content);
+    stripAds(holder.content);
     removeJunk(holder.content);
     absolutizeUrls(holder.content);
 
@@ -301,9 +385,10 @@
     }
 
     // Same cleanup as article mode — comments must still never appear
-    // in the page body itself.
+    // in the page body itself, and ad scraps only waste ink.
     removeJunk(bodyClone);
     stripComments(bodyClone);
+    stripAds(bodyClone);
     absolutizeUrls(bodyClone);
 
     return {
