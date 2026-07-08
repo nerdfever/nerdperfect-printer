@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "NerdPerfect Printer",
-  "version": "1.0.2",
-  "version_name": "1.02",
-  "homepage_url": "https://nerdfever.com",
+  "version": "1.0.3",
+  "version_name": "1.03",
+  "homepage_url": "https://nerdfever.com/introducing-the-nerdperfect-printer/",
   "author": "nerdfever.com",
   "description": "Clean, readable printouts of web articles. Two clicks: extract the article, reflow it, print. All local — nothing collected.",
 
