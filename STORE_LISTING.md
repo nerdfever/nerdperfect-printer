@@ -85,7 +85,7 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 
 - Publisher: nerdfever.com (set as the developer display name in the
   Chrome Web Store dashboard; shows publicly as "offered by nerdfever.com")
-- Homepage URL: https://nerdfever.com/introducing-the-nerdperfect-printer/
+- Homepage URL: https://nerdfever.com/introducing-nerdperfect-printer/
 - Category: Productivity (or Tools)
 - Language: English
 - Pricing: Free
