@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!-- NerdPerfect Printer — popup.html
+     Original author: Claude Fable 5, 2026-07-07 -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NerdPerfect Printer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- Two-row header: brand + print buttons on top, settings below -->
+  <header id="toolbar">
+    <div id="titleRow">
+      <img id="brandIcon" src="icons/icon32.png" alt="" width="16" height="16">
+      <span id="brandName">NerdPerfect Printer</span>
+
+      <span class="spacer"></span>
+
+      <label class="field">
+        <input id="comments" type="checkbox">
+        Print comments
+      </label>
+
+      <button id="expand" title="Open in a larger, resizable window">⤢</button>
+      <button id="printOne" disabled>Print first sheet</button>
+      <button id="printAll" class="primary" disabled>Print all</button>
+    </div>
+
+    <!-- Both dropdowns are populated by popup.js from the size lists in
+         shared.js, so there's exactly one source of truth for them. -->
+    <div class="controlsRow">
+      <label class="field">
+        Font size
+        <select id="fontSize"></select> pt
+      </label>
+
+      <span class="spacer"></span>
+
+      <label class="field" id="duplexField">
+        <input id="duplex" type="checkbox">
+        Double-sided printer
+      </label>
+    </div>
+
+    <div class="controlsRow">
+      <label class="field">
+        <input id="serif" type="checkbox">
+        <!-- Text filled in by popup.js from SP_SERIF_STACK, e.g. "Force Georgia font" -->
+        <span id="serifLabel">Force serif font</span>
+      </label>
+
+      <span class="spacer"></span>
+
+      <label class="field">
+        Print preview size:
+        <select id="paper"></select>
+      </label>
+    </div>
+  </header>
+
+  <!-- One-line status: what's being previewed, page estimate, warnings -->
+  <div id="status">Reading page…</div>
+
+  <!-- Scaled-down preview of the printout, with page-break overlay -->
+  <div id="previewArea">
+    <div id="sheetWrap">
+      <iframe id="preview" title="Print preview"></iframe>
+    </div>
+  </div>
+
+  <!-- Hidden same-width iframe used for one-sheet fit measurement -->
+  <iframe id="measure" aria-hidden="true" tabindex="-1"></iframe>
+
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

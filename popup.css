@@ -1,0 +1,204 @@
+/* NerdPerfect Printer — popup.css
+ * Original author: Claude Fable 5, 2026-07-07
+ *
+ * Styles for the popup shell only — the preview content itself is styled
+ * by print.css inside the preview iframe.
+ */
+
+/* Fixed popup footprint (Chrome caps popups at 800x600). */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 760px;
+  height: 580px;
+  overflow: hidden;
+  font: 13px system-ui, sans-serif;
+  background: #f3f4f6;
+  color: #111;
+}
+
+/* Expanded mode (own window via the ⤢ button): fill whatever size the
+   user drags the window to. */
+html.expanded, html.expanded body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Toolbar                                                                    */
+/* ------------------------------------------------------------------------- */
+
+#toolbar {
+  padding: 7px 12px 9px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  flex: none;
+}
+
+/* Row 1: extension name on the left, print buttons on the right. */
+#titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+#brandName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Rows 2 and 3: the settings, on two fixed lines. The second line's
+   spacer pushes the preview-size control flush right. */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.controlsRow + .controlsRow {
+  margin-top: 7px;
+}
+
+/* Sits visually under the "Print first sheet" button, since that's the
+   button it affects (offset ≈ the "Print all" button's width + gap). */
+#duplexField {
+  margin-right: 90px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* Consistent control rendering so boxes sit level with their captions. */
+select {
+  font: inherit;
+  padding: 2px 4px;
+  margin: 0;
+}
+
+input[type="checkbox"] {
+  margin: 0;
+}
+
+#fontSize {
+  width: 62px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+button {
+  font: inherit;
+  padding: 6px 14px;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+button.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The expand-to-window button: compact, icon-only. */
+#expand {
+  padding: 6px 10px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Status line                                                                */
+/* ------------------------------------------------------------------------- */
+
+#status {
+  padding: 5px 12px;
+  font-size: 12px;
+  color: #444;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e5e5;
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Warning flavor, used for the extraction-failed notice. */
+#status.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Error flavor, used when the page can't be read at all. */
+#status.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Preview area                                                               */
+/* ------------------------------------------------------------------------- */
+
+#previewArea {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+}
+
+/* Wrapper sized by JS to the scaled sheet stack — the sheets themselves
+   (drawn inside the iframe) provide the paper look. */
+#sheetWrap {
+  position: relative;
+  margin: 0 auto;
+}
+
+/* The preview document, scaled down via transform by JS. */
+#preview {
+  border: 0;
+  display: block;
+  transform-origin: 0 0;
+  pointer-events: none;   /* preview is look, don't touch */
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Hidden measurement iframe (must be laid out, so not display:none)          */
+/* ------------------------------------------------------------------------- */
+
+#measure {
+  position: absolute;
+  left: -12000px;
+  top: 0;
+  width: 700px;
+  height: 400px;
+  border: 0;
+  visibility: hidden;
+}

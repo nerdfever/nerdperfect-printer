@@ -1,0 +1,247 @@
+/* NerdPerfect Printer — print.css
+ * Original author: Claude Fable 5, 2026-07-07
+ *
+ * The one print stylesheet, used by BOTH the popup's preview iframe and the
+ * print tab — that's what keeps the preview honest. JS sets the custom
+ * properties below before rendering.
+ *
+ * Keep the @page margin in sync with SP_MARGIN_IN in shared.js.
+ */
+
+
+/* ------------------------------------------------------------------------- */
+/* Knobs set by JS                                                            */
+/* ------------------------------------------------------------------------- */
+
+:root {
+  --sp-font-size: 11pt;                              /* chosen size, 9–16pt   */
+  --sp-font-family: Georgia, serif;                  /* site font or serif    */
+  --sp-content-width: 672px;                         /* paper minus margins   */
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Page geometry and base typography                                          */
+/* ------------------------------------------------------------------------- */
+
+/* Generous margins that never clip on common printers. */
+@page {
+  margin: 0.75in;
+}
+
+/* Padding must never push an element past the column edge (some sites put
+   200px+ of horizontal padding on captions and buttons). */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Always render light, whatever the site or OS theme says. */
+html {
+  color-scheme: light only;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: #000;
+  font-family: var(--sp-font-family);
+  font-size: var(--sp-font-size);
+  line-height: 1.45;
+
+  /* Single text column at the printable width (screen contexts: the
+     preview iframe and the render tab before the dialog opens). */
+  width: var(--sp-content-width);
+}
+
+/* Center the sheet when the render tab is viewed on screen. */
+@media screen {
+  body {
+    margin: 0 auto;
+    padding: 24px 0;
+  }
+}
+
+@media print {
+  body {
+    width: auto;   /* the @page margins define the column when printing */
+    padding: 0;
+  }
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Force black-on-white throughout the content                                */
+/* ------------------------------------------------------------------------- */
+
+.sp-content,
+.sp-content * {
+  color: #000 !important;
+  background: transparent !important;
+  text-shadow: none !important;
+
+  /* Lazy-loaders leave images at opacity 0 until scrolled into view —
+     on paper everything is "in view". */
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  /* Nothing inside may set its own column width or float away. */
+  max-width: 100% !important;
+
+  /* Inline-style fixed sizes (common on app-like pages) squeeze content
+     into narrow columns or make it overflow its box and overlap what
+     follows — flow naturally at the full column width instead. */
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+
+  /* Carousels position items with transforms — another way for content
+     to land on top of unrelated text. */
+  transform: none !important;
+}
+
+/* Fallback (whole-page) mode: thumbnails and hero images abound — keep
+   them modest so a results page doesn't balloon. */
+.sp-mode-fallback img {
+  max-height: 2.2in !important;
+  width: auto !important;
+}
+
+/* Content the site itself renders as small print (author bios, image
+   credits, disclaimers — tagged by extract.js from the live computed
+   styles) stays small and grey on paper too. Sized from the base font
+   directly so nested tags don't compound the shrink. */
+.sp-content [data-sp-small],
+.sp-content [data-sp-small] * {
+  font-size: calc(var(--sp-font-size) * 0.72) !important;
+  color: #444 !important;
+  line-height: 1.35 !important;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Header and footer                                                          */
+/* ------------------------------------------------------------------------- */
+
+.sp-title {
+  font-size: 1.55em;
+  line-height: 1.25;
+  margin: 0 0 0.35em;
+}
+
+.sp-byline {
+  font-size: 0.9em;
+  font-style: italic;
+  margin: 0 0 1.2em;
+}
+
+.sp-footer {
+  margin-top: 1.6em;
+  padding-top: 0.5em;
+  border-top: 1px solid #888;
+  font-size: 0.75em;
+  overflow-wrap: anywhere;   /* long URLs must wrap, never clip */
+  break-inside: avoid;       /* the footer block prints in one piece */
+}
+
+/* Heading for the optional appended comment threads. */
+.sp-comments-title {
+  margin-top: 1.8em;
+  padding-top: 0.7em;
+  border-top: 2px solid #000;
+  font-size: 1.15em;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Content rules                                                              */
+/* ------------------------------------------------------------------------- */
+
+/* Links: underlined so the reader can tell, but no printed URL. */
+.sp-content a {
+  text-decoration: underline;
+}
+
+/* Images and figures: scaled to the column, never split across pages. */
+.sp-content img {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  break-inside: avoid;
+}
+
+.sp-content figure {
+  margin: 1em 0;
+  break-inside: avoid;
+}
+
+.sp-content figcaption {
+  font-size: 0.85em;
+  font-style: italic;
+  margin-top: 0.3em;
+
+  /* Sites pad captions to center them in wide layouts — meaningless here. */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Headings stay attached to what follows them. */
+.sp-content h1, .sp-content h2, .sp-content h3,
+.sp-content h4, .sp-content h5, .sp-content h6 {
+  break-after: avoid;
+  line-height: 1.25;
+}
+
+/* Break after any line, pushing only the straddling line to the next
+   page (Chrome's default widows/orphans of 2 would push extra lines and
+   drift from the popup preview's pagination model). */
+.sp-content p, .sp-content li, .sp-content blockquote, .sp-content div {
+  orphans: 1;
+  widows: 1;
+}
+
+/* Code and preformatted text: wrap instead of clipping at the page edge. */
+.sp-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85em;
+  border: 1px solid #ccc;
+  padding: 0.5em;
+}
+
+.sp-content code {
+  font-size: 0.9em;
+}
+
+/* Tables: visible grid, constrained to the column. */
+.sp-content table {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+
+.sp-content th, .sp-content td {
+  border: 1px solid #999;
+  padding: 2px 6px;
+  vertical-align: top;
+}
+
+/* Quotes: simple indent with a rule. */
+.sp-content blockquote {
+  margin: 0.8em 0 0.8em 1em;
+  padding-left: 0.8em;
+  border-left: 2px solid #999;
+}
+
+/* Media and embeds have no meaning on paper. */
+.sp-content video, .sp-content audio, .sp-content iframe,
+.sp-content embed, .sp-content object, .sp-content canvas,
+.sp-content button, .sp-content input, .sp-content select,
+.sp-content textarea {
+  display: none !important;
+}
+
+/* Kill floats and stickiness inherited from inline styles — these are
+   exactly what lets site elements sit on top of article text. */
+.sp-content * {
+  float: none !important;
+  position: static !important;
+}

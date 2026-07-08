@@ -1,0 +1,5 @@
+# Test outputs saved during development — not part of the extension.
+*.pdf
+
+# Web Store upload packages — built from the tracked sources.
+*.zip

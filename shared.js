@@ -1,0 +1,417 @@
+// NerdPerfect Printer — shared.js
+// Original author: Claude Fable 5, 2026-07-07
+//
+// Helpers shared by the popup and the service worker. Loaded as a plain
+// <script> in popup.html and via importScripts() in background.js — so
+// everything here is plain globals, no modules, and nothing runs at load
+// time. (Also injected into pages' isolated worlds ahead of extract.js,
+// which is why top-level declarations use redeclaration-safe `var`.)
+
+"use strict";
+
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+// Paper sizes the preview / one-sheet math can assume (inches). Desktop
+// Chrome gives extensions no way to query the real printer's sizes (the
+// chrome.printing API is ChromeOS-only), so we offer the common ones;
+// the actual paper is whatever the system print dialog says.
+var SP_PAPERS = {
+  letter:  { widthIn: 8.5,  heightIn: 11,    label: 'Letter (8.5x11")' },
+  legal:   { widthIn: 8.5,  heightIn: 14,    label: 'Legal (8.5x14")' },
+  tabloid: { widthIn: 11,   heightIn: 17,    label: 'Tabloid (11x17")' },
+  superb:  { widthIn: 13,   heightIn: 19,    label: 'Super B (13x19")' },
+  a4:      { widthIn: 8.27, heightIn: 11.69, label: "A4" },
+  a5:      { widthIn: 5.83, heightIn: 8.27,  label: "A5" },
+  b5:      { widthIn: 6.93, heightIn: 9.84,  label: "B5 (ISO)" },
+};
+
+// Font sizes offered in the popup dropdown (pt): fine half-point steps
+// through the body-text range, bigger jumps above.
+var SP_FONT_SIZES = [6, 7, 8, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 14, 16, 18, 20, 24, 28, 36];
+
+// Page margin baked into print.css's @page rule (inches). Generous enough
+// that common printers never clip. Keep this in sync with print.css.
+var SP_MARGIN_IN = 0.75;
+
+// CSS pixels per inch (fixed by the CSS spec).
+var SP_DPI = 96;
+
+// The serif stack used when "Use clean serif font" is checked.
+var SP_SERIF_STACK = 'Georgia, "Times New Roman", Times, serif';
+
+// Fallback font when the page's own font couldn't be captured.
+var SP_FALLBACK_STACK = "system-ui, sans-serif";
+
+// Known comment containers, stripped as a safety net in full-article mode
+// (Readability drops most comments already). NEVER applied in selection mode.
+var SP_COMMENT_SELECTORS = [
+  "#comments",
+  "#respond",
+  "#disqus_thread",
+  ".comments",
+  ".comments-section",   // Substack
+  ".comments-page",      // Substack
+  ".comment-list",
+  ".comments-area",
+  '[class*="comment"]',
+  '[id*="comment"]',
+].join(", ");
+
+// Settings defaults — these five preferences are ALL we ever store.
+var SP_DEFAULT_SETTINGS = {
+  fontSize: 11,       // pt, one of SP_FONT_SIZES
+  serif: false,       // false = use the page's own body font
+  paper: "letter",    // a key of SP_PAPERS
+  duplex: true,       // true = one sheet holds 2 pages; false = 1 page
+  comments: false,    // true = append the page's comment threads
+};
+
+
+// ---------------------------------------------------------------------------
+// Settings (chrome.storage.sync)
+// ---------------------------------------------------------------------------
+
+// Load the saved preferences, filling in defaults for anything missing.
+async function spLoadSettings() {
+  const stored = await chrome.storage.sync.get(SP_DEFAULT_SETTINGS);
+
+  // Snap the stored font size to the nearest value the dropdown offers,
+  // in case an out-of-range value was ever synced.
+  const wanted = Number(stored.fontSize) || 11;
+  stored.fontSize = SP_FONT_SIZES.reduce(
+    (best, size) => (Math.abs(size - wanted) < Math.abs(best - wanted) ? size : best),
+    SP_FONT_SIZES[0]
+  );
+
+  // Fall back to Letter if the paper key is unrecognized.
+  if (!SP_PAPERS[stored.paper]) stored.paper = "letter";
+
+  // Coerce the flags to plain booleans.
+  stored.duplex = Boolean(stored.duplex);
+  stored.comments = Boolean(stored.comments);
+
+  return stored;
+}
+
+// Persist the preferences (the only data this extension ever stores).
+async function spSaveSettings(settings) {
+  await chrome.storage.sync.set({
+    fontSize: settings.fontSize,
+    serif: settings.serif,
+    paper: settings.paper,
+    duplex: settings.duplex,
+    comments: settings.comments,
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Paper geometry
+// ---------------------------------------------------------------------------
+
+// Page dimensions in CSS pixels for a given paper setting: the full sheet,
+// the printable area inside the @page margins, and the margin itself.
+function spPaperMetrics(paper) {
+  const p = SP_PAPERS[paper] || SP_PAPERS.letter;
+
+  return {
+    paperWidthPx:    Math.round(p.widthIn  * SP_DPI),
+    paperHeightPx:   Math.round(p.heightIn * SP_DPI),
+    marginPx:        Math.round(SP_MARGIN_IN * SP_DPI),
+    contentWidthPx:  Math.round((p.widthIn  - 2 * SP_MARGIN_IN) * SP_DPI),
+    contentHeightPx: Math.round((p.heightIn - 2 * SP_MARGIN_IN) * SP_DPI),
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// Document assembly
+// ---------------------------------------------------------------------------
+
+// Escape text for safe insertion into HTML.
+function spEscapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Today's date as YYYY-MM-DD (local time).
+function spTodayISO() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// Build the full body HTML of a printout: title header, optional byline,
+// the content, and the source-URL/date footer. Used identically by the
+// popup preview and the print tab so the preview matches the printout.
+function spBuildBodyHtml(meta, contentHtml) {
+  const parts = [];
+
+  // Title header (the page/article title).
+  parts.push(`<h1 class="sp-title">${spEscapeHtml(meta.title || "")}</h1>`);
+
+  // Byline, when Readability found one.
+  if (meta.byline) {
+    parts.push(`<div class="sp-byline">${spEscapeHtml(meta.byline)}</div>`);
+  }
+
+  // The article / selection content itself. Fallback mode gets an extra
+  // class so print.css can apply stricter whole-page rules.
+  const contentClass =
+    meta.mode === "fallback" ? "sp-content sp-mode-fallback" : "sp-content";
+  parts.push(`<div class="${contentClass}">${contentHtml}</div>`);
+
+  // Footer: source URL and retrieval date, small text at the end.
+  parts.push(
+    `<div class="sp-footer">Source: ${spEscapeHtml(meta.url || "")}` +
+    ` &middot; Printed ${spTodayISO()}</div>`
+  );
+
+  return parts.join("\n");
+}
+
+// The font-family to render with: our serif when the checkbox is on,
+// otherwise the font stack captured from the page (with a fallback).
+function spResolveFontFamily(settings, siteFont) {
+  return settings.serif ? SP_SERIF_STACK : (siteFont || SP_FALLBACK_STACK);
+}
+
+// Push the user's choices into the CSS custom properties print.css reads.
+// Works on any document rendered with print.css (preview iframe, print tab).
+function spApplyPrintVars(doc, settings, siteFont) {
+  const metrics = spPaperMetrics(settings.paper);
+  const root = doc.documentElement;
+
+  root.style.setProperty("--sp-font-size", settings.fontSize + "pt");
+  root.style.setProperty("--sp-font-family", spResolveFontFamily(settings, siteFont));
+  root.style.setProperty("--sp-content-width", metrics.contentWidthPx + "px");
+}
+
+// Wait until every image in the document has loaded (or errored), with a
+// hard timeout so a dead image URL can never stall printing or measuring.
+function spWaitForImages(doc, timeoutMs) {
+  const pending = Array.from(doc.images).filter((img) => !img.complete);
+  if (!pending.length) return Promise.resolve();
+
+  const allDone = Promise.allSettled(
+    pending.map(
+      (img) =>
+        new Promise((resolve) => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        })
+    )
+  );
+
+  const timeout = new Promise((resolve) => setTimeout(resolve, timeoutMs));
+
+  return Promise.race([allDone, timeout]);
+}
+
+// The content HTML to render: the article/selection itself, plus the
+// page's comment threads when the "Print comments" preference is on.
+function spComposeContentHtml(payload, settings) {
+  let html = payload.html;
+
+  // Comments go after the article, under their own heading.
+  if (settings.comments && payload.commentsHtml) {
+    html += '<h2 class="sp-comments-title">Comments</h2>' + payload.commentsHtml;
+  }
+
+  return html;
+}
+
+// ---------------------------------------------------------------------------
+// In-page printing
+// ---------------------------------------------------------------------------
+
+// Print a payload in its own tab via spPrintInPage. Prepares everything
+// that needs extension-context access — the print stylesheet text and the
+// assembled body HTML. `contentHtml` overrides the composed content (the
+// popup's one-sheet truncation); pass null for the standard composition.
+// Callable from the popup and the service worker.
+async function spPrintInTab(tabId, payload, settings, contentHtml) {
+  // The print stylesheet, as text the injected printer can carry along.
+  const cssText = await (await fetch(chrome.runtime.getURL("print.css"))).text();
+
+  // Everything the in-page printer needs, in one serializable job.
+  const job = {
+    bodyHtml: spBuildBodyHtml(
+      payload,
+      contentHtml != null ? contentHtml : spComposeContentHtml(payload, settings)
+    ),
+    cssText,
+    fontFamily: spResolveFontFamily(settings, payload.siteFont),
+    fontSizePt: settings.fontSize,
+    contentWidthPx: spPaperMetrics(settings.paper).contentWidthPx,
+  };
+
+  // Inject the printer into the page.
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: spPrintInPage,
+    args: [job],
+  });
+}
+
+// Runs INSIDE the target page (injected via executeScript, so it must be
+// fully self-contained — no references to anything in this file). Renders
+// the prepared printout in a hidden container that becomes the only
+// visible thing under @media print, opens the print dialog, and cleans up
+// afterwards. Printing in the page's own tab keeps Chrome's optional
+// print header/footer showing the article's real title and URL — a
+// separate render tab would print chrome-extension://… there.
+async function spPrintInPage(job) {
+  const doc = document;
+  const ROOT_ID = "nerdperfect-print-root";
+
+  // A previous run may have been interrupted — clear its leftovers.
+  const stale = doc.getElementById(ROOT_ID);
+  if (stale) stale.remove();
+
+  // The printout, invisible on screen.
+  const root = doc.createElement("div");
+  root.id = ROOT_ID;
+  root.innerHTML = job.bodyHtml;
+  doc.body.appendChild(root);
+
+  // Our font/paper knobs, as the custom properties the print CSS reads.
+  // Set on <html> so they inherit down to the body rules. Harmless on
+  // screen (nothing else reads --sp-* properties); removed on cleanup.
+  const rootStyle = doc.documentElement.style;
+  rootStyle.setProperty("--sp-font-size", job.fontSizePt + "pt");
+  rootStyle.setProperty("--sp-font-family", job.fontFamily);
+  rootStyle.setProperty("--sp-content-width", job.contentWidthPx + "px");
+
+  // Print-only styles: hide the page, show only the printout, then the
+  // whole print stylesheet — all nested inside @media print so the
+  // page's screen rendering is never touched.
+  const cssText =
+    "#" + ROOT_ID + " { display: none; }\n" +
+    "@media print {\n" +
+    "  html > :not(body):not(head) { display: none !important; }\n" +
+    "  body > :not(#" + ROOT_ID + ") { display: none !important; }\n" +
+    // The printout gets its own topmost stacking layer with an opaque
+    // background: page overlays that lose their styling when we disable
+    // the site's stylesheets can otherwise print as white slabs painted
+    // over the content (seen on Google results pages).
+    "  #" + ROOT_ID + " {\n" +
+    "    display: block !important;\n" +
+    "    position: relative !important;\n" +
+    "    z-index: 2147483647 !important;\n" +
+    "    background: #fff !important;\n" +
+    "  }\n" +
+    job.cssText + "\n" +
+    "}\n";
+
+  // Prefer a constructed stylesheet (immune to the page's CSP); fall back
+  // to a <style> element where unsupported.
+  const priorAdopted = Array.from(doc.adoptedStyleSheets);
+  let sheet = null;
+  let styleEl = null;
+  try {
+    sheet = new CSSStyleSheet();
+    sheet.replaceSync(cssText);
+    doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+  } catch (e) {
+    styleEl = doc.createElement("style");
+    styleEl.textContent = cssText;
+    doc.documentElement.appendChild(styleEl);
+  }
+
+  // The site's own stylesheets, disabled while the dialog is open (see
+  // below) and restored afterwards.
+  const disabledSheets = [];
+
+  // Undo everything once the dialog closes (printed or cancelled alike).
+  window.addEventListener(
+    "afterprint",
+    () => {
+      root.remove();
+      doc.adoptedStyleSheets = priorAdopted;
+      if (styleEl) styleEl.remove();
+      for (const ss of disabledSheets) ss.disabled = false;
+      rootStyle.removeProperty("--sp-font-size");
+      rootStyle.removeProperty("--sp-font-family");
+      rootStyle.removeProperty("--sp-content-width");
+    },
+    { once: true }
+  );
+
+  // Give pending images a moment — they usually come straight from this
+  // page's cache, so this rarely waits at all.
+  const pending = Array.from(root.querySelectorAll("img")).filter((img) => !img.complete);
+  if (pending.length) {
+    await Promise.race([
+      Promise.allSettled(
+        pending.map(
+          (img) =>
+            new Promise((resolve) => {
+              img.addEventListener("load", resolve, { once: true });
+              img.addEventListener("error", resolve, { once: true });
+            })
+        )
+      ),
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]);
+  }
+
+  // The popup's preview and one-sheet fit are measured WITHOUT the site's
+  // stylesheets, but here they'd still style the cloned content (its
+  // classes resolve against them) and paginate differently. Disable them
+  // while the dialog is open so what prints is exactly what was measured.
+  // The page behind the dialog looks unstyled for the duration; afterprint
+  // restores it.
+  for (const ss of Array.from(doc.styleSheets)) {
+    try {
+      if (!ss.disabled) {
+        ss.disabled = true;
+        disabledSheets.push(ss);
+      }
+    } catch (e) {
+      // Cross-origin stylesheet objects can throw on access — skip them.
+    }
+  }
+  if (sheet) doc.adoptedStyleSheets = [sheet];
+
+  // The system print dialog.
+  window.print();
+}
+
+
+// ---------------------------------------------------------------------------
+// Extraction (runs the content scripts in the target tab)
+// ---------------------------------------------------------------------------
+
+// Extract content from the tab. `mode` is "auto" (selection if one exists,
+// else article), "article" (force full article), or "selection".
+// Returns the payload object produced by extract.js.
+async function spExtractFromTab(tabId, mode) {
+  // Hand the requested mode to the isolated world where extract.js runs.
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (m) => { self.__smartPrintMode = m; },
+    args: [mode],
+  });
+
+  // Define the Readability class and our shared constants in that world.
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["shared.js", "vendor/readability.js"],
+  });
+
+  // Run the extractor; its completion value is the payload.
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["extract.js"],
+  });
+
+  return results && results[0] ? results[0].result : null;
+}
