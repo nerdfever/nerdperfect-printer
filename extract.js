@@ -344,8 +344,15 @@
 
     // "Screen-reader only" tricks hide things by clipping to ~1px rather
     // than display:none (skip-links, a11y labels) — skip those too.
-    const rect = liveEl.getBoundingClientRect();
-    if (rect.width < 2 && rect.height < 2) return null;
+    // EXCEPT display:contents elements: they generate no box at all, so
+    // their rect is 0x0 by definition while their children render
+    // normally. SPA frameworks (claude.ai among them) use them as
+    // invisible wrappers around the entire app — the size test would
+    // throw the whole page away.
+    if (cs.display !== "contents") {
+      const rect = liveEl.getBoundingClientRect();
+      if (rect.width < 2 && rect.height < 2) return null;
+    }
 
     // Skip machinery and decorative vectors outright.
     if (/^(script|style|noscript|template|link|svg|iframe)$/i.test(liveEl.tagName)) return null;
