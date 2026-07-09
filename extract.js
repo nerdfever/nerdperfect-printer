@@ -232,7 +232,6 @@
       siteFont: captureSiteFont(),
       html: container.innerHTML,
       commentsHtml: "",   // a selection prints verbatim, nothing appended
-      notice: "",
     };
   }
 
@@ -322,13 +321,12 @@
       siteFont: captureSiteFont(),
       html: holder.innerHTML,
       commentsHtml: extractComments(),
-      notice: "",
     };
   }
 
 
   // -------------------------------------------------------------------------
-  // Fallback mode: the VISIBLE page through the cleanup CSS, with a notice.
+  // Fallback mode: the VISIBLE page through the cleanup CSS.
   // -------------------------------------------------------------------------
 
   // Deep-clone only what is actually visible on screen. The printout has
@@ -407,7 +405,6 @@
       siteFont: captureSiteFont(),
       html: bodyClone.innerHTML,
       commentsHtml: extractComments(),
-      notice: "Couldn't extract an article from this page — showing the whole page instead.",
     };
   }
 

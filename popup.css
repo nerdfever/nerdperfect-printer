@@ -150,12 +150,6 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-/* Warning flavor, used for the extraction-failed notice. */
-#status.warn {
-  background: #fef3c7;
-  color: #92400e;
-}
-
 /* Error flavor, used when the page can't be read at all. */
 #status.error {
   background: #fee2e2;

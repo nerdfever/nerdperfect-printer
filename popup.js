@@ -436,7 +436,7 @@ function syncPreviewGeometry(doc, metrics) {
   el.sheetWrap.style.width = Math.round(metrics.paperWidthPx * scale) + "px";
   el.sheetWrap.style.height = Math.round(stackHeight * scale) + "px";
 
-  // Status line: mode, page count, and the fallback notice if any.
+  // Status line: the page count.
   updateStatus(pages);
 }
 
@@ -460,20 +460,16 @@ function chromePrintDate() {
   return new Date().toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
 }
 
-// Status line text for the normal (non-error) case.
+// Status line text for the normal (non-error) case: just the page count.
+// How the content was obtained (article vs whole page) is not the user's
+// problem — the preview speaks for itself. Selection mode is still called
+// out, confirming the selection was picked up.
 function updateStatus(pages) {
-  const what =
-    payload.mode === "selection" ? "Selected text" :
-    payload.mode === "article" ? "Extracted article" :
-    "Whole page";
-
   const pageText = pages === 1 ? "≈ 1 page" : `≈ ${pages} pages`;
 
-  if (payload.notice) {
-    showStatus(`${payload.notice} — ${pageText}.`, "warn");
-  } else {
-    showStatus(`${what} — ${pageText} at current settings.`, "");
-  }
+  const prefix = payload.mode === "selection" ? "Selected text — " : "";
+
+  showStatus(`${prefix}${pageText} at current settings.`, "");
 }
 
 function showStatus(text, flavor) {

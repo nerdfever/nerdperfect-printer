@@ -34,7 +34,8 @@ elements. Published free on the Chrome Web Store; no support offered.
   If Readability fails to parse — or "succeeds" but captures under ~20%
   of the page's text (search-results pages, where it latches onto one
   box like Google's AI Overview) — fall back to rendering `document.body`
-  through the cleanup CSS with a notice in the preview.
+  through the cleanup CSS. The fallback is silent: the popup status line
+  shows only the page count, never how the content was obtained.
 
 - **Printing happens in the article's own tab** (no render tab): the
   cleaned printout is injected hidden into the page, revealed only under
