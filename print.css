@@ -17,6 +17,7 @@
   --sp-font-size: 11pt;                              /* chosen size, 9–16pt   */
   --sp-font-family: Georgia, serif;                  /* site font or serif    */
   --sp-content-width: 672px;                         /* paper minus margins   */
+  --sp-content-height: 912px;                        /* printable page height */
 }
 
 
@@ -161,9 +162,14 @@ body {
   text-decoration: underline;
 }
 
-/* Images and figures: scaled to the column, never split across pages. */
+/* Images and figures: scaled to the column, never split across pages.
+   The height cap is what keeps a taller-than-page image on ONE page, by
+   shrinking it proportionally — break-inside can do nothing for an
+   element bigger than the page itself. The 8% headroom leaves room for
+   a caption and the figure margins. */
 .sp-content img {
   max-width: 100% !important;
+  max-height: calc(var(--sp-content-height) * 0.92) !important;
   width: auto !important;
   height: auto !important;
   break-inside: avoid;

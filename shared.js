@@ -212,6 +212,7 @@ function spApplyPrintVars(doc, settings, siteFont) {
   root.style.setProperty("--sp-font-size", settings.fontSize + "pt");
   root.style.setProperty("--sp-font-family", spResolveFontFamily(settings, siteFont));
   root.style.setProperty("--sp-content-width", metrics.contentWidthPx + "px");
+  root.style.setProperty("--sp-content-height", metrics.contentHeightPx + "px");
 }
 
 // Wait until every image in the document has loaded (or errored), with a
@@ -261,6 +262,9 @@ async function spPrintInTab(tabId, payload, settings, contentHtml) {
   // The print stylesheet, as text the injected printer can carry along.
   const cssText = await (await fetch(chrome.runtime.getURL("print.css"))).text();
 
+  // The chosen paper's geometry, for the layout knobs below.
+  const metrics = spPaperMetrics(settings.paper);
+
   // Everything the in-page printer needs, in one serializable job.
   const job = {
     bodyHtml: spBuildBodyHtml(
@@ -270,7 +274,8 @@ async function spPrintInTab(tabId, payload, settings, contentHtml) {
     cssText,
     fontFamily: spResolveFontFamily(settings, payload.siteFont),
     fontSizePt: settings.fontSize,
-    contentWidthPx: spPaperMetrics(settings.paper).contentWidthPx,
+    contentWidthPx: metrics.contentWidthPx,
+    contentHeightPx: metrics.contentHeightPx,
   };
 
   // Inject the printer into the page.
@@ -309,6 +314,7 @@ async function spPrintInPage(job) {
   rootStyle.setProperty("--sp-font-size", job.fontSizePt + "pt");
   rootStyle.setProperty("--sp-font-family", job.fontFamily);
   rootStyle.setProperty("--sp-content-width", job.contentWidthPx + "px");
+  rootStyle.setProperty("--sp-content-height", job.contentHeightPx + "px");
 
   // Print-only styles: hide the page, show only the printout, then the
   // whole print stylesheet — all nested inside @media print so the
@@ -361,6 +367,7 @@ async function spPrintInPage(job) {
       rootStyle.removeProperty("--sp-font-size");
       rootStyle.removeProperty("--sp-font-family");
       rootStyle.removeProperty("--sp-content-width");
+      rootStyle.removeProperty("--sp-content-height");
     },
     { once: true }
   );
