@@ -9,7 +9,8 @@ same engine as Firefox Reader View), reflows it into a clean
 print-optimized layout, and prints that instead.
 
 Published by [nerdfever.com](https://nerdfever.com).
-Original author: Claude Fable 5, 2026-07-07.
+Every line written by Claude (Anthropic's Claude Fable 5), 2026-07-07,
+directed by nerdfever.com.
 
 ## How to install (load unpacked)
 
@@ -88,6 +89,8 @@ account.
 - Article extraction: [Readability.js](https://github.com/mozilla/readability)
   by Mozilla and Arc90, vendored unmodified in `vendor/` (version 0.6.0,
   Apache License 2.0 — see `vendor/LICENSE.md`).
-- Everything else: original author Claude Fable 5, 2026-07-07.
+- Everything else: written entirely by Claude (Anthropic's Claude
+  Fable 5), 2026-07-07 — every line — directed and published by
+  nerdfever.com.
 
 NerdPerfect Printer is provided as-is, free of charge, with **no support offered**.

@@ -39,6 +39,19 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > - Source URL and date printed at the end
 > - Right-click menu: "Print page / selection with NerdPerfect Printer"
 >
+> **Settings, explained**
+> - *Print comments* (off by default) — appends the page's comment threads
+>   after the article, under a "Comments" heading; comments never appear
+>   inside the article itself. Tip: only comments already loaded in the
+>   page can print, so on sites that load comments as you scroll, scroll
+>   through them first, then print.
+> - *Print preview size* — sets the paper size the preview uses to show
+>   page breaks. It does not choose the paper you print on — pick that in
+>   the system print dialog, as usual.
+> - *Double-sided printer* (on by default) — tells "Print first sheet" how
+>   much fits on one physical sheet: two pages if your printer prints both
+>   sides, one if it doesn't.
+>
 > **Private by design**
 > - Everything runs locally in your browser
 > - No account, no sign-in, no AI, no cloud
@@ -50,7 +63,16 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > Article extraction is powered by Mozilla's open-source Readability
 > (the Firefox Reader View engine).
 >
-> Provided free and as-is, with no support offered.
+> **Free, open source, no support**
+> Provided free and as-is, with no support offered. Every line of this
+> extension was written by Claude, Anthropic's AI (directed by
+> nerdfever.com). The complete source code (MIT license) ships unminified
+> inside the extension itself and is published at
+> https://github.com/nerdfever/nerdperfect-printer — short, plain
+> JavaScript. If something misbehaves or you want it to work differently,
+> paste the code back into Claude (or any AI assistant) and ask: the AI
+> that wrote it can usually diagnose the problem or make the change for
+> you.
 
 ## Privacy-practices justifications (per permission)
 
