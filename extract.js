@@ -236,6 +236,59 @@
   }
 
 
+  // Readability keeps one winning container; on some sites (TechSpot) the
+  // lead/hero image sits OUTSIDE it — often wrapped in a lightbox link —
+  // and silently vanishes from the result. When the extracted article has
+  // NO image at all, recover the page's lead image: the largest
+  // prominently-rendered image near the top of the page, strongly
+  // preferring the one the site itself nominates via og:image. Articles
+  // that already carry any image are never touched.
+  function recoverLeadImage(holder) {
+    if (holder.content.querySelector("img")) return;
+
+    // Filename stem, with size-variant suffixes dropped, so the og:image
+    // URL can be matched against responsive variants of the same file
+    // ("2026-07-19-image.jpg" vs "2026-07-19-image-j_1100.webp").
+    const stem = (u) => {
+      const base = (u.split("/").pop() || "").split("?")[0];
+      return base
+        .replace(/\.[a-z0-9]+$/i, "")
+        .replace(/[-_](?:\d{2,4}w?|j|small|medium|large|thumb)$/gi, "");
+    };
+
+    const ogMeta = document.querySelector('meta[property="og:image"], meta[name="og:image"]');
+    const ogStem = ogMeta && ogMeta.content ? stem(ogMeta.content) : "";
+
+    let best = null;
+    let bestScore = 0;
+    for (const img of document.images) {
+      const r = img.getBoundingClientRect();
+      if (r.width < 400 || r.height < 200) continue;          // too small for a lead
+      if (r.top + window.scrollY > 4000) continue;            // nowhere near the top
+      if (img.closest("nav, header, footer, aside")) continue;
+
+      const s = stem(img.currentSrc || img.src || "");
+      const isOg =
+        ogStem.length >= 6 && s.length >= 6 &&
+        (s.startsWith(ogStem) || ogStem.startsWith(s));
+
+      const score = r.width * r.height * (isOg ? 8 : 1);
+      if (score > bestScore) {
+        bestScore = score;
+        best = img;
+      }
+    }
+    if (!best) return;
+
+    const fig = document.createElement("figure");
+    const img = document.createElement("img");
+    img.src = best.currentSrc || best.src;
+    if (best.alt) img.alt = best.alt;
+    fig.appendChild(img);
+    holder.content.prepend(fig);
+  }
+
+
   // -------------------------------------------------------------------------
   // Article mode: Readability on a clone of the document.
   // -------------------------------------------------------------------------
@@ -310,7 +363,22 @@
     stripComments(holder.content);
     stripAds(holder.content);
     removeJunk(holder.content);
+
+    // A "successful" parse where most of the text lives inside links is a
+    // results/listing page, not an article — Amazon searches sail past the
+    // sliver check on sheer volume (16 product titles beat 4000 chars), but
+    // no real article keeps the majority of its prose inside anchors.
+    // Punt to fallback mode, which handles listing pages properly.
+    const contentLen = (holder.content.textContent || "").trim().length;
+    let linkLen = 0;
+    for (const a of holder.content.querySelectorAll("a")) {
+      linkLen += (a.textContent || "").trim().length;
+    }
+    const linkDensity = contentLen ? linkLen / contentLen : 0;
+    if (linkDensity > 0.30) return null;
+
     absolutizeUrls(holder.content);
+    recoverLeadImage(holder);
 
     return {
       mode: "article",
@@ -335,10 +403,14 @@
   // results page carries dozens) and blow decorative inline SVG icons up
   // to column width.
   function cloneVisibleTree(liveEl) {
-    // Skip whatever the site itself isn't showing.
+    // Skip whatever the site itself isn't showing. Note: aria-hidden is
+    // deliberately NOT honored — it hides from screen readers, not from
+    // sighted users, and sites mark visually-rendered content with it to
+    // reduce screen-reader redundancy (Amazon puts it on every product
+    // image link and visible price). What's truly invisible is caught by
+    // the computed-style and size tests.
     const cs = getComputedStyle(liveEl);
     if (cs.display === "none" || cs.visibility === "hidden") return null;
-    if (liveEl.getAttribute("aria-hidden") === "true") return null;
 
     // "Screen-reader only" tricks hide things by clipping to ~1px rather
     // than display:none (skip-links, a11y labels) — skip those too.
@@ -350,6 +422,25 @@
     if (cs.display !== "contents") {
       const rect = liveEl.getBoundingClientRect();
       if (rect.width < 2 && rect.height < 2) return null;
+
+      // Screen-reader-only text parked off the canvas (left:-9999px and
+      // friends): a box entirely left of, or above, the document origin
+      // is invisible by construction — and it DUPLICATES visible text,
+      // so it must not print.
+      if (rect.right + window.scrollX <= 0 || rect.bottom + window.scrollY <= 0) {
+        return null;
+      }
+
+      // Another screen-reader-only trick: a normal-sized box whose
+      // visible region is CLIPPED to nothing (clip: rect(0 0 0 0);
+      // clip-path: inset(50%)).
+      const clip = cs.clip;
+      if (clip && clip !== "auto") {
+        // rect(top, right, bottom, left) — visible w/h under 2px is hidden.
+        const m = clip.match(/rect\(\s*([\d.]+)px[ ,]+([\d.]+)px[ ,]+([\d.]+)px[ ,]+([\d.]+)px/);
+        if (m && m[2] - m[4] < 2 && m[3] - m[1] < 2) return null;
+      }
+      if (/inset\(\s*(?:50|100)%/.test(cs.clipPath || "")) return null;
     }
 
     // Skip machinery and decorative vectors outright.
@@ -373,13 +464,54 @@
     return copy;
   }
 
+  // Results/listing pages (searches, category pages, shop grids) render as
+  // grids of repeated "cards" — an image paired with title/price/details.
+  // Linearized into our single column, every tile becomes a tall stack of
+  // fragments and the printout runs to dozens of pages. Detect the
+  // repetition and retile each card as a compact thumbnail-left row
+  // (styled via [data-sp-card] rules in print.css). Fallback mode only.
+  function compactResultCards(root) {
+    for (const container of root.querySelectorAll("div, ul, ol, section, main")) {
+      // Skip grids nested inside an already-retiled card.
+      if (container.closest("[data-sp-card]")) continue;
+
+      // Candidate cards: direct children that each pair an image with a
+      // meaningful amount of text. Four or more siblings of the same tag
+      // doing that is a results grid, not article content.
+      const cards = Array.from(container.children).filter(
+        (el) =>
+          el.querySelector("img") &&
+          (el.textContent || "").trim().length >= 30
+      );
+      if (cards.length < 4) continue;
+      if (new Set(cards.map((el) => el.tagName)).size !== 1) continue;
+
+      for (const card of cards) {
+        // Everything the card had moves into a details cell; its first
+        // (main) image moves out front into a thumbnail cell.
+        const body = document.createElement("div");
+        body.setAttribute("data-sp-card-body", "1");
+        while (card.firstChild) body.appendChild(card.firstChild);
+
+        const img = body.querySelector("img");
+        if (img) {
+          const thumb = document.createElement("div");
+          thumb.setAttribute("data-sp-card-thumb", "1");
+          thumb.appendChild(img);
+          card.appendChild(thumb);
+        }
+
+        card.appendChild(body);
+        card.setAttribute("data-sp-card", "1");
+      }
+    }
+  }
+
   function extractFallback() {
     const bodyClone = cloneVisibleTree(document.body) || document.createElement("div");
 
-    // Navigation chrome has no meaning on paper.
-    for (const el of bodyClone.querySelectorAll('nav, [role="navigation"], [role="banner"]')) {
-      el.remove();
-    }
+    // Site furniture has no meaning on paper (selector list in shared.js).
+    removeMatching(bodyClone, SP_FALLBACK_CHROME_SELECTORS);
 
     // Drop inline styles wholesale: they're all that's left to fight the
     // print layout (site stylesheets never reach the printout), and they
@@ -394,6 +526,11 @@
     removeJunk(bodyClone);
     stripComments(bodyClone);
     stripAds(bodyClone);
+
+    // Retile results grids AFTER the strips, so removed junk can't count
+    // toward (or survive inside) a detected card.
+    compactResultCards(bodyClone);
+
     absolutizeUrls(bodyClone);
 
     return {

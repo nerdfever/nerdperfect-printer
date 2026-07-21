@@ -344,7 +344,7 @@ function computePageBreaks(doc, flow, pageH) {
     }
   }
 
-  for (const el of flow.querySelectorAll("img, svg, canvas, figure")) {
+  for (const el of flow.querySelectorAll("img, svg, canvas, figure, [data-sp-card]")) {
     const r = el.getBoundingClientRect();
     if (r.height > 0) atoms.push({ top: r.top - flowTop, bottom: r.bottom - flowTop });
   }

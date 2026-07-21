@@ -80,6 +80,42 @@ var SP_AD_SELECTORS = [
   "[data-ad-unit]",
 ].join(", ");
 
+// Page chrome stripped ONLY in fallback (whole-page) mode. Fallback pages
+// are portals and results pages, not articles — landmark furniture
+// (navigation, headers, footers, search boxes, facet sidebars, consent
+// dialogs) only wastes paper there. Never applied in article mode (which
+// Readability already prunes) or selection mode (verbatim by contract).
+var SP_FALLBACK_CHROME_SELECTORS = [
+  "nav",
+  "header",
+  "footer",
+  '[role="navigation"]',
+  '[role="banner"]',
+  '[role="search"]',
+  '[role="contentinfo"]',
+  '[role="complementary"]',
+  '[role="dialog"]',
+  '[aria-modal="true"]',
+  "#navbar",                  // Amazon top nav (also common Bootstrap-era nav id)
+  "#nav-belt",                // Amazon search-bar row
+  "#s-refinements",           // Amazon facet/filter sidebar
+  "#navFooter",               // Amazon site footer
+  "#rhf",                     // Amazon "related to items you've viewed"
+  "#sp-cc",                   // Amazon cookie-consent banner
+  ".s-pagination-strip",      // Amazon results pagination
+  ".s-pagination-container",
+  ".a-button",                // Amazon buttons ("Add to basket") — styled
+                              //   spans, so the print CSS button rule
+                              //   can't catch them
+  ".a-offscreen",             // Amazon screen-reader / truncation text
+  ".a-truncate-full",         //   twins: absolutely positioned exactly ON
+  ".a-icon-alt",              //   TOP of the visible copy, so no geometry
+                              //   test can distinguish them — reflowed,
+                              //   they print as duplicated text
+  ".a-popover-preload",       // Amazon preloaded popover bodies ("You're
+  '[id^="a-popover"]',        //   seeing this ad based on…")
+].join(", ");
+
 // Settings defaults — these five preferences are ALL we ever store.
 var SP_DEFAULT_SETTINGS = {
   fontSize: 11,       // pt, one of SP_FONT_SIZES

@@ -33,9 +33,29 @@ elements. Published free on the Chrome Web Store; no support offered.
   extractor; never modify the vendored file beyond updating it wholesale.
   If Readability fails to parse — or "succeeds" but captures under ~20%
   of the page's text (search-results pages, where it latches onto one
-  box like Google's AI Overview) — fall back to rendering `document.body`
-  through the cleanup CSS. The fallback is silent: the popup status line
-  shows only the page count, never how the content was obtained.
+  box like Google's AI Overview) — or when the "article" is really a
+  listing page (link density of the parsed result > 0.30: search results
+  and shop grids keep most text inside links; real articles measure
+  0.03–0.15) — fall back to rendering `document.body` through the cleanup
+  CSS. The fallback is silent: the popup status line shows only the page
+  count, never how the content was obtained.
+
+- **Fallback visibility rules** (cloneVisibleTree in extract.js): clone
+  what a *sighted user sees*. `aria-hidden` is deliberately NOT honored —
+  sites (Amazon) mark visible product images and prices aria-hidden.
+  Hidden text is dropped only on visual evidence: display/visibility,
+  sub-2px boxes, boxes left of/above the document origin, and zero-area
+  clip/clip-path. One trick defeats all geometry tests — duplicates
+  positioned exactly ON TOP of the visible copy (Amazon's
+  `.a-offscreen` / `.a-truncate-full` / `.a-icon-alt`) — those are
+  stripped by class name in SP_FALLBACK_CHROME_SELECTORS (shared.js),
+  alongside site furniture (nav/header/footer landmarks, Amazon chrome).
+
+- **Fallback retiles results grids as cards**: 4+ same-tag siblings each
+  pairing an image with ≥30 chars of text = a listing grid; each tile
+  becomes a thumbnail-left ruled row (`[data-sp-card]`, styled in
+  print.css, unbreakable across pages — mirrored in popup.js's
+  pagination atoms). Beats both Chrome and Printdeck on Amazon.
 
 - **Printing happens in the article's own tab** (no render tab): the
   cleaned printout is injected hidden into the page, revealed only under
