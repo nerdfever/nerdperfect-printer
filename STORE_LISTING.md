@@ -4,10 +4,10 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 
 ## Short description (132 chars max)
 
-> Clean, readable printouts of web articles. Two clicks: extract the
-> article, reflow it, print. All local — nothing collected.
+> Clean prints of web pages, esp. articles. No text clipping, ads and
+> overlays removed from print. All local - nothing collected.
 
-(129 characters.)
+(127 characters.)
 
 ## Detailed description
 

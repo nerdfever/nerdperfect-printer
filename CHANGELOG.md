@@ -6,6 +6,7 @@ All notable changes, newest first. Written entirely by Claude
 ## 1.10 — 2026-07-22
 
 - The popup title now shows the version number.
+- Clearer store summary and description.
 - Shop and search pages (Amazon, Google results, and the like) are now
   recognized by their page structure, before article extraction runs.
   This fixes amazon.com printing a nearly empty page, and Google

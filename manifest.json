@@ -5,7 +5,7 @@
   "version_name": "1.10",
   "homepage_url": "https://nerdfever.com/introducing-nerdperfect-printer/",
   "author": "nerdfever.com",
-  "description": "Clean, readable printouts of web articles. Two clicks: extract the article, reflow it, print. All local — nothing collected.",
+  "description": "Clean prints of web pages, esp. articles. No text clipping, ads and overlays removed from print. All local - nothing collected.",
 
   "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
 
