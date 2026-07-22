@@ -11,14 +11,15 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 
 ## Detailed description
 
-> **Print the article, not the ads.**
+> Prints web pages (esp. articles) cleanly without ads, needless
+> whitespace, or clipping the edges of each page.
 >
 > Chrome's built-in print often clips text at the page edges and lets ads,
 > cookie banners, and sticky headers land on top of the article.
 > NerdPerfect Printer extracts just the article — title, byline, text, and images —
 > and reflows it into a clean single-column layout that prints properly.
 >
-> **Two clicks, done:**
+> **To use, 2 clicks:**
 > 1. Click the NerdPerfect Printer icon. A live preview shows exactly what will
 >    print, with page breaks marked.
 > 2. Click "Print all" — or "Print first sheet" to fit the article onto a
@@ -39,7 +40,7 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > - Source URL and date printed at the end
 > - Right-click menu: "Print page / selection with NerdPerfect Printer"
 >
-> **Settings, explained**
+> **Settings**
 > - *Print comments* (off by default) — appends the page's comment threads
 >   after the article, under a "Comments" heading; comments never appear
 >   inside the article itself. Tip: only comments already loaded in the
@@ -69,9 +70,7 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > nerdfever.com). The complete source code (MIT license) ships unminified
 > inside the extension itself and is published at
 > https://github.com/nerdfever/nerdperfect-printer — short, plain
-> JavaScript — with a change log at
-> https://github.com/nerdfever/nerdperfect-printer/blob/main/CHANGELOG.md.
-> If something misbehaves or you want it to work differently,
+> JavaScript. If something misbehaves or you want it to work differently,
 > paste the code back into Claude (or any AI assistant) and ask: the AI
 > that wrote it can usually diagnose the problem or make the change for
 > you.
