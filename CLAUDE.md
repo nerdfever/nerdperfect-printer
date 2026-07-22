@@ -33,12 +33,25 @@ elements. Published free on the Chrome Web Store; no support offered.
   extractor; never modify the vendored file beyond updating it wholesale.
   If Readability fails to parse — or "succeeds" but captures under ~20%
   of the page's text (search-results pages, where it latches onto one
-  box like Google's AI Overview) — or when the "article" is really a
-  listing page (link density of the parsed result > 0.30: search results
-  and shop grids keep most text inside links; real articles measure
-  0.03–0.15) — fall back to rendering `document.body` through the cleanup
-  CSS. The fallback is silent: the popup status line shows only the page
-  count, never how the content was obtained.
+  box like Google's AI Overview) — fall back to rendering `document.body`
+  through the cleanup CSS. The fallback is silent: the popup status line
+  shows only the page count, never how the content was obtained.
+
+- **Listing pages never enter Readability** (it strips their images and
+  title links yet can "succeed" on text volume — seen on amazon.com and
+  Google). The decision is structural and made BEFORE parsing, on the
+  visible page: grids of 4+ same-tag siblings each pairing an image with
+  ≥30 chars of text, together holding >35% of the page's text, mean a
+  listing → straight to fallback. Articles that merely contain a gallery
+  fail the share test. Two guards remain after Readability: the sliver
+  check above, and link density of the parse > 0.30 (listings keep most
+  text inside links; real articles measure 0.03–0.15).
+
+- **Article mode sees only rendered content**: the clone is pruned of
+  computed-hidden elements (lockstep live/clone walk, like small-print
+  tagging) before Readability runs — Readability's own visibility test
+  reads only inline styles, so class-hidden template blobs could
+  otherwise win its scoring (amazon.com printed as an empty page).
 
 - **Fallback visibility rules** (cloneVisibleTree in extract.js): clone
   what a *sighted user sees*. `aria-hidden` is deliberately NOT honored —

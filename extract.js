@@ -202,6 +202,27 @@
     }
   }
 
+  // Remove from the clone everything the page doesn't actually render
+  // (computed display:none / visibility:hidden), walking live and clone
+  // in lockstep. Readability's own visibility test reads only INLINE
+  // styles, so a huge class-hidden container of template text can win
+  // its scoring outright — and print as nothing (amazon.com). Nodes are
+  // collected during the walk and removed after, so the walkers stay in
+  // sync; removing a child of an already-removed ancestor is a no-op.
+  function pruneHiddenInClone(docClone) {
+    const live = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT);
+    const copy = docClone.createTreeWalker(docClone.documentElement, NodeFilter.SHOW_ELEMENT);
+
+    const doomed = [];
+    while (live.nextNode() && copy.nextNode()) {
+      const cs = getComputedStyle(live.currentNode);
+      if (cs.display === "none" || cs.visibility === "hidden") {
+        doomed.push(copy.currentNode);
+      }
+    }
+    for (const el of doomed) el.remove();
+  }
+
 
   // -------------------------------------------------------------------------
   // Selection mode: serialize exactly what the user selected, verbatim.
@@ -297,8 +318,11 @@
     const docClone = document.cloneNode(true);
 
     // Mark the site's own small print while live and clone still match
-    // node-for-node (must run before any mutation of the clone).
+    // node-for-node (must run before any mutation of the clone), then
+    // drop everything the page doesn't render (also needs the lockstep
+    // walk, so it comes right after and before any other mutation).
     tagSmallPrint(docClone);
+    pruneHiddenInClone(docClone);
 
     // Strip known comment containers BEFORE Readability runs, so it can't
     // mistake a huge comment thread for article content.
@@ -331,6 +355,37 @@
     // Drop what the page itself marks as non-content (needs pageTextLen
     // for its size guard, so it runs after the measurement).
     stripNoSnippet(docClone, pageTextLen);
+
+    // Listing pages (search results, shop grids) must never reach
+    // Readability at all — it mangles them (stripping images and title
+    // links) yet can "succeed" on sheer text volume. Decide from the
+    // page's own structure, BEFORE parsing: grids of 4+ same-tag
+    // siblings that each pair an image with real text, holding a large
+    // share of the page's text, mean a listing. An article that merely
+    // CONTAINS a gallery fails the share test — captions are a sliver
+    // of an article's prose.
+    if (pageTextLen) {
+      let gridTextLen = 0;
+      const countedCards = [];
+      for (const container of docClone.querySelectorAll("div, ul, ol, section, main")) {
+        // Skip grids nested inside an already-counted card.
+        if (countedCards.some((card) => card.contains(container))) continue;
+
+        const kids = Array.from(container.children).filter(
+          (el) =>
+            el.querySelector("img") &&
+            (el.textContent || "").trim().length >= 30
+        );
+        if (kids.length < 4) continue;
+        if (new Set(kids.map((el) => el.tagName)).size !== 1) continue;
+
+        for (const kid of kids) {
+          gridTextLen += (kid.textContent || "").trim().length;
+          countedCards.push(kid);
+        }
+      }
+      if (gridTextLen > 0.35 * pageTextLen) return null;
+    }
 
     // Run Readability; treat any exception as a parse failure.
     let article = null;
@@ -427,7 +482,7 @@
       // friends): a box entirely left of, or above, the document origin
       // is invisible by construction — and it DUPLICATES visible text,
       // so it must not print.
-      if (rect.right + window.scrollX <= 0 || rect.bottom + window.scrollY <= 0) {
+      if (rect.right + window.scrollX < 0 || rect.bottom + window.scrollY < 0) {
         return null;
       }
 
