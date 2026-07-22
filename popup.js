@@ -49,6 +49,11 @@ async function init() {
     el.paper.add(new Option(paper.label, key));
   }
 
+  // Brand line carries the version (from the manifest, the one source
+  // of truth), e.g. "NerdPerfect Printer v1.10".
+  document.getElementById("brandName").textContent =
+    "NerdPerfect Printer v" + chrome.runtime.getManifest().version_name;
+
   // Label the force-font checkbox with the font it actually forces
   // (the first entry of the serif stack in shared.js).
   document.getElementById("serifLabel").textContent =
