@@ -69,7 +69,9 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > nerdfever.com). The complete source code (MIT license) ships unminified
 > inside the extension itself and is published at
 > https://github.com/nerdfever/nerdperfect-printer — short, plain
-> JavaScript. If something misbehaves or you want it to work differently,
+> JavaScript — with a change log at
+> https://github.com/nerdfever/nerdperfect-printer/blob/main/CHANGELOG.md.
+> If something misbehaves or you want it to work differently,
 > paste the code back into Claude (or any AI assistant) and ask: the AI
 > that wrote it can usually diagnose the problem or make the change for
 > you.
