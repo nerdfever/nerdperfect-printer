@@ -52,7 +52,7 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 >   much fits on one physical sheet: two pages if your printer prints both
 >   sides, one if it doesn't.
 >
-> **Private by design**
+> **Private**
 > - Everything runs locally in your browser
 > - No account, no sign-in, no AI, no cloud
 > - No analytics, no network requests
@@ -63,7 +63,7 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > Article extraction is powered by Mozilla's open-source Readability
 > (the Firefox Reader View engine).
 >
-> **Free, open source, no support**
+> **Free, open source, w/all the support you paid for (none)**
 > Provided free and as-is, with no support offered. Every line of this
 > extension was written by Claude, Anthropic's AI (directed by
 > nerdfever.com). The complete source code (MIT license) ships unminified
