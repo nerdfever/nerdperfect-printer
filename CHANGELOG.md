@@ -3,7 +3,7 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
-## 1.11 — in progress (testing as 1.10.x builds)
+## 1.11 — 2026-08-20
 
 - Account pages on shopping sites (order history and the like) now print
   just the content: account sidebars, app-promo boxes, and header bars
