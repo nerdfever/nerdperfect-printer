@@ -562,6 +562,47 @@
     }
   }
 
+  // Shop/search pages surround their results with furniture no landmark
+  // selector can name: account sidebars, app-promo boxes, tab bars,
+  // "Need help?" widgets (seen on the aliexpress order list — its menus
+  // are styled divs, not <nav>, and not even links, so link density is
+  // useless as a signal). Structure is the reliable signal: the junk is
+  // always a small card-less sliver flanking one dominant column that
+  // leads down to the retiled cards. Walk down that spine — whenever one
+  // child holds the dominant share of a node's text, drop its small
+  // card-less flanks and descend. Stop at the card grid itself, at any
+  // substantial card-less flank (real prose must never be cut), or when
+  // no child dominates. Runs ONLY on pages that actually retiled cards,
+  // so prose fallbacks (chat transcripts) are never touched.
+  function pruneListingFurniture(root) {
+    if (!root.querySelector("[data-sp-card]")) return;
+
+    const textLen = (el) => (el.textContent || "").trim().length;
+
+    let node = root;
+    while (true) {
+      // Reached the level of the cards themselves — done.
+      if (node.querySelector(":scope > [data-sp-card]")) return;
+
+      const total = textLen(node);
+      if (!total) return;
+
+      // The spine: the one child carrying most of the remaining text.
+      const kids = Array.from(node.children);
+      const spine = kids.find((el) => textLen(el) >= SP_SPINE_DOMINANT_SHARE * total);
+      if (!spine) return;
+
+      // A card-less flank with substantial text is real prose, not
+      // furniture — stop before removing anything at this level.
+      const flanks = kids.filter((el) => el !== spine && !el.querySelector("[data-sp-card]"));
+      if (flanks.some((el) => textLen(el) >= SP_SPINE_FLANK_MAX_CHARS)) return;
+
+      for (const el of flanks) el.remove();
+
+      node = spine;
+    }
+  }
+
   function extractFallback() {
     const bodyClone = cloneVisibleTree(document.body) || document.createElement("div");
 
@@ -582,9 +623,16 @@
     stripComments(bodyClone);
     stripAds(bodyClone);
 
+    // Cross-sell recommendation rails go before card retiling, so their
+    // product tiles never count as (or survive among) the page's cards.
+    removeMatching(bodyClone, SP_RECOMMEND_SELECTORS);
+
     // Retile results grids AFTER the strips, so removed junk can't count
     // toward (or survive inside) a detected card.
     compactResultCards(bodyClone);
+
+    // With the cards marked, prune the furniture flanking them.
+    pruneListingFurniture(bodyClone);
 
     absolutizeUrls(bodyClone);
 

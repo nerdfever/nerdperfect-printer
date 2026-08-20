@@ -1,5 +1,8 @@
 # Test outputs saved during development — not part of the extension.
+# (.mhtml saves can contain personal page content — the repo is public,
+# so they must never be committed.)
 *.pdf
+*.mhtml
 
 # Web Store upload packages — built from the tracked sources.
 *.zip

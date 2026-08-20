@@ -3,6 +3,14 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.11 — 2026-08-20
+
+- Account pages on shopping sites (order history and the like) now print
+  just the content: account sidebars, app-promo boxes, and header bars
+  are pruned from whole-page printouts. An AliExpress order list went
+  from 13 pages to 5.
+- "More to love"-style recommendation rails no longer print.
+
 ## 1.10 — 2026-07-22
 
 - The popup title now shows the version number.

@@ -116,6 +116,24 @@ var SP_FALLBACK_CHROME_SELECTORS = [
   '[id^="a-popover"]',        //   seeing this ad based on…")
 ].join(", ");
 
+// Recommendation rails on shop pages ("More to love", "Customers also
+// bought") — cross-sell grids of products the user never asked about,
+// often bigger than the real content (19 tiles vs 10 orders on an
+// aliexpress order list). Class/id substring match, same approach as
+// the comment selectors. Fallback mode only.
+var SP_RECOMMEND_SELECTORS = [
+  '[class*="recommend"]',
+  '[id*="recommend"]',
+].join(", ");
+
+// Fallback listing pages: pruning the furniture that flanks the results
+// column (see pruneListingFurniture in extract.js).
+var SP_SPINE_DOMINANT_SHARE = 0.75;  // child holding this share of a node's
+                                     //   text is "the content spine"
+var SP_SPINE_FLANK_MAX_CHARS = 400;  // a card-less flank with more text than
+                                     //   this is treated as real prose, and
+                                     //   stops the pruning entirely
+
 // Settings defaults — these five preferences are ALL we ever store.
 var SP_DEFAULT_SETTINGS = {
   fontSize: 11,       // pt, one of SP_FONT_SIZES
