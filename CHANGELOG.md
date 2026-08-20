@@ -3,14 +3,6 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
-## 1.12 — 2026-08-20
-
-- Product photos that sites paint as CSS backgrounds (rather than real
-  image tags) now print — AliExpress order lists were printing every
-  order without its product picture.
-- A listing card's thumbnail is now its most prominent image, not just
-  the first one found (which was often a store badge).
-
 ## 1.11 — 2026-08-20
 
 - Account pages on shopping sites (order history and the like) now print
@@ -18,6 +10,11 @@ All notable changes, newest first. Written entirely by Claude
   are pruned from whole-page printouts. An AliExpress order list went
   from 13 pages to 5.
 - "More to love"-style recommendation rails no longer print.
+- Product photos that sites paint as CSS backgrounds (rather than real
+  image tags) now print — AliExpress order lists were printing every
+  order without its product picture.
+- A listing card's thumbnail is now its most prominent image, not just
+  the first one found (which was often a store badge).
 
 ## 1.10 — 2026-07-22
 
