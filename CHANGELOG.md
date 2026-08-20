@@ -3,6 +3,16 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.12 — in progress (testing as 1.11.x builds)
+
+- Reddit post images print reliably: the printout no longer carries
+  reddit's live image components, which could blank the picture at
+  print time even though the preview showed it.
+- Reddit post bylines show the votes: "3067 points (97% upvoted)".
+  (Reddit only publishes the net score and ratio — the raw up/down
+  split hasn't been available since 2014. Comment scores already
+  print.)
+
 ## 1.11 — 2026-08-20
 
 - Account pages on shopping sites (order history and the like) now print

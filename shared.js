@@ -152,6 +152,10 @@ var SP_SITE_WIDGET_SELECTORS = [
   "faceplate-progress",
 ].join(", ");
 
+// Reddit post media: only images that RENDERED at least this big
+// (area, px²) count as post content — smaller ones are icons/badges.
+var SP_POST_MEDIA_MIN_AREA_PX = 10000;
+
 // Threaded comments: replies are indented on screen; reproduce that on
 // paper from each comment's measured left offset (stamped at clone
 // time), scaled down to save column width and capped per nesting step.

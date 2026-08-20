@@ -863,27 +863,56 @@
 
     const wrap = document.createElement("div");
 
-    // One header line: subreddit, author, age, score, comment count.
+    // One header line: subreddit, author, age, votes, comment count.
+    // Reddit exposes only the net score plus (for posts) the upvote
+    // ratio — the raw up/down split hasn't been public API since 2014.
     const head = document.createElement("div");
     head.setAttribute("data-sp-comment-head", "1");
     const ago = post.querySelector("faceplate-timeago, time");
+    const ratio = parseFloat(post.getAttribute("upvote-ratio"));
     head.textContent = [
       post.getAttribute("subreddit-prefixed-name"),
       post.getAttribute("author") ? "u/" + post.getAttribute("author") : "",
       ago ? (ago.textContent || "").trim() : "",
-      post.getAttribute("score") ? post.getAttribute("score") + " points" : "",
+      post.getAttribute("score")
+        ? post.getAttribute("score") + " points" +
+          (ratio ? " (" + Math.round(ratio * 100) + "% upvoted)" : "")
+        : "",
       post.getAttribute("comment-count") ? post.getAttribute("comment-count") + " comments" : "",
     ].filter(Boolean).join(" · ");
     wrap.appendChild(head);
 
-    // The post content: media (image/video poster) and/or text body.
-    for (const slot of ['[slot="post-media-container"]', '[slot="text-body"]']) {
-      const part = post.querySelector(slot);
-      if (part) {
-        const div = document.createElement("div");
-        div.innerHTML = part.innerHTML;
-        wrap.appendChild(div);
+    // The post media, rebuilt as clean figures: reddit wraps its images
+    // in LIVE custom elements (lightbox listeners, image observers)
+    // that upgrade when the printout is injected back into the page and
+    // can re-render it blank at print time — and it pairs each image
+    // with a blurred decorative twin of the same file. Keep one plain
+    // <img> per distinct real image; leave all the machinery behind.
+    const media = post.querySelector('[slot="post-media-container"]');
+    if (media) {
+      const seen = new Set();
+      for (const img of media.querySelectorAll("img")) {
+        const src = img.getAttribute("src") || "";
+        if (!/^(https?:|data:)/.test(src)) continue;
+        if ((Number(img.getAttribute("data-sp-area")) || 0) < SP_POST_MEDIA_MIN_AREA_PX) continue;
+        if (seen.has(src)) continue;
+        seen.add(src);
+
+        const fig = document.createElement("figure");
+        const clean = document.createElement("img");
+        clean.src = src;
+        if (img.getAttribute("alt")) clean.alt = img.getAttribute("alt");
+        fig.appendChild(clean);
+        wrap.appendChild(fig);
       }
+    }
+
+    // A text post's body, verbatim.
+    const textBody = post.querySelector('[slot="text-body"]');
+    if (textBody) {
+      const div = document.createElement("div");
+      div.innerHTML = textBody.innerHTML;
+      wrap.appendChild(div);
     }
 
     // The page becomes just the post (the title is already the header).
