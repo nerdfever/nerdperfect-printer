@@ -504,6 +504,32 @@
     // Shallow-copy this element, then recurse into its children.
     const copy = liveEl.cloneNode(false);
 
+    // Record every image's rendered area, so later passes can tell a
+    // product photo from a store badge (retiling picks the biggest
+    // image in a card as its thumbnail).
+    if (liveEl.tagName === "IMG") {
+      const r = liveEl.getBoundingClientRect();
+      copy.setAttribute("data-sp-area", String(Math.round(r.width * r.height)));
+    }
+
+    // Shop sites often paint product photos as CSS backgrounds rather
+    // than <img> (aliexpress order lists) — those clone as empty boxes
+    // and the photo silently never prints. Bake a sufficiently large
+    // background image into a real <img> child. Size-gated so icons and
+    // sprite tricks stay off the paper.
+    if (liveEl.tagName !== "IMG" && cs.backgroundImage && cs.backgroundImage.includes("url(")) {
+      const r = liveEl.getBoundingClientRect();
+      if (r.width >= SP_BG_IMAGE_MIN_PX && r.height >= SP_BG_IMAGE_MIN_PX) {
+        const m = cs.backgroundImage.match(/url\(["']?([^"')]+)["']?\)/);
+        if (m && /^(https?:|data:)/.test(m[1])) {
+          const img = document.createElement("img");
+          img.src = m[1];
+          img.setAttribute("data-sp-area", String(Math.round(r.width * r.height)));
+          copy.appendChild(img);
+        }
+      }
+    }
+
     // Keep the site's own de-emphasis: small print stays small on paper.
     if (isSmallPrint(liveEl)) copy.setAttribute("data-sp-small", "1");
 
@@ -548,7 +574,18 @@
         body.setAttribute("data-sp-card-body", "1");
         while (card.firstChild) body.appendChild(card.firstChild);
 
-        const img = body.querySelector("img");
+        // The card's most prominent image becomes the thumbnail — chosen
+        // by rendered area captured at clone time, because the FIRST
+        // image in a card is often a store badge, not the product photo
+        // (aliexpress puts its "Choice" badge above the item picture).
+        const imgs = Array.from(body.querySelectorAll("img"));
+        imgs.sort(
+          (a, b) =>
+            (Number(b.getAttribute("data-sp-area")) || 0) -
+            (Number(a.getAttribute("data-sp-area")) || 0)
+        );
+
+        const img = imgs[0];
         if (img) {
           const thumb = document.createElement("div");
           thumb.setAttribute("data-sp-card-thumb", "1");

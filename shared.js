@@ -126,6 +126,13 @@ var SP_RECOMMEND_SELECTORS = [
   '[id*="recommend"]',
 ].join(", ");
 
+// Fallback mode: an element painting a CSS background-image at least this
+// big (rendered, both dimensions) is treated as a real content image —
+// shop sites often render product photos as background divs, not <img>
+// (aliexpress order lists), and those would otherwise clone as empty
+// boxes and never print. Kept well above icon/sprite size.
+var SP_BG_IMAGE_MIN_PX = 48;
+
 // Fallback listing pages: pruning the furniture that flanks the results
 // column (see pruneListingFurniture in extract.js).
 var SP_SPINE_DOMINANT_SHARE = 0.75;  // child holding this share of a node's
