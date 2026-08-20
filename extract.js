@@ -247,15 +247,36 @@
     // No usable selection → signal the caller to fall through to article mode.
     if (!sel || sel.isCollapsed || !sel.toString().trim()) return null;
 
-    // Clone every range of the selection into one container, in order.
+    // Clone every range through the same visible-tree walk fallback
+    // uses, restricted to the selected nodes. The selected CONTENT is
+    // verbatim; what this changes is fidelity to the screen: hidden
+    // machinery (offscreen text twins, hovercards) doesn't print, and
+    // photos the site paints as CSS backgrounds do (aliexpress orders).
     const container = document.createElement("div");
     for (let i = 0; i < sel.rangeCount; i++) {
-      container.appendChild(sel.getRangeAt(i).cloneContents());
+      const range = sel.getRangeAt(i);
+
+      // Walk from the range's enclosing ELEMENT (the common ancestor
+      // may be a text node for single-run selections).
+      const root =
+        range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+          ? range.commonAncestorContainer
+          : range.commonAncestorContainer.parentElement;
+
+      const kept = cloneVisibleTree(root, range);
+      if (kept) container.appendChild(kept);
     }
 
     // Clean scripts/styles out of the clone, and make URLs portable.
-    // NO comment stripping here — a selection prints verbatim.
+    // NO comment/ad stripping here — a selection prints verbatim.
     removeJunk(container);
+
+    // Same visual-truth cleanups as fallback (nothing is filtered):
+    // zoom/lightbox twins print once, and a selected results grid
+    // retiles as compact card rows instead of stacked fragments.
+    dedupeImages(container);
+    compactResultCards(container);
+
     absolutizeUrls(container);
 
     return {
@@ -471,7 +492,13 @@
   // everything the site hides via classes (menus, dialogs — a Google
   // results page carries dozens) and blow decorative inline SVG icons up
   // to column width.
-  function cloneVisibleTree(liveEl) {
+  //
+  // The optional `range` restricts the clone to a selection: elements
+  // and text outside the range are skipped, and the boundary text nodes
+  // are sliced at the range's offsets — used by selection mode so the
+  // selected content gets the same visible-only treatment as fallback.
+  function cloneVisibleTree(liveEl, range) {
+    if (range && !range.intersectsNode(liveEl)) return null;
     // Skip whatever the site itself isn't showing. Note: aria-hidden is
     // deliberately NOT honored — it hides from screen readers, not from
     // sighted users, and sites mark visually-rendered content with it to
@@ -554,9 +581,20 @@
 
     for (const child of liveEl.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
-        copy.appendChild(child.cloneNode());
+        // Outside a selection range: skip. On its boundary: slice the
+        // text at the range offsets so only the selected part prints.
+        if (range && !range.intersectsNode(child)) continue;
+
+        let text = child.textContent;
+        if (range) {
+          const start = child === range.startContainer ? range.startOffset : 0;
+          const end = child === range.endContainer ? range.endOffset : text.length;
+          text = text.slice(start, end);
+        }
+
+        if (text) copy.appendChild(document.createTextNode(text));
       } else if (child.nodeType === Node.ELEMENT_NODE) {
-        const kept = cloneVisibleTree(child);
+        const kept = cloneVisibleTree(child, range);
         if (kept) copy.appendChild(kept);
       }
     }

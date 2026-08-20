@@ -109,36 +109,51 @@ body {
   width: auto !important;
 }
 
-/* Results-grid cards (tagged by extract.js in fallback mode): thumbnail
-   left, details right, never split across pages — a product/search grid
-   prints as a compact ruled list instead of a mile of stacked fragments. */
-.sp-mode-fallback [data-sp-card] {
+/* Results-grid cards (tagged by extract.js in fallback and selection
+   modes): thumbnail left, details right, never split across pages — a
+   product/search grid prints as a compact ruled list instead of a mile
+   of stacked fragments. */
+.sp-content [data-sp-card] {
   display: flex !important;
-  gap: 0.15in;
+  gap: 0.12in;
   align-items: flex-start;
   border-top: 1px solid #bbb;
-  padding-top: 0.3em;
-  margin-top: 0.3em;
+  padding-top: 0.25em;
+  margin-top: 0.25em;
   break-inside: avoid;
+
+  /* A card is a catalog row, not prose: smaller and tighter, so the
+     printed list approaches the screen's density. */
+  font-size: 0.85em;
+  line-height: 1.3;
 }
 
-.sp-mode-fallback [data-sp-card-thumb] {
-  flex: 0 0 1.1in;
+.sp-content [data-sp-card-thumb] {
+  flex: 0 0 0.9in;
 }
 
-.sp-mode-fallback [data-sp-card-thumb] img {
-  max-width: 1.1in !important;
-  max-height: 1.4in !important;
+.sp-content [data-sp-card-thumb] img {
+  max-width: 0.9in !important;
+  max-height: 1.1in !important;
 }
 
-.sp-mode-fallback [data-sp-card-body] {
+.sp-content [data-sp-card-body] {
   flex: 1 1 0;
   min-width: 0;
 }
 
+/* The details cell reads as tight rows: the site's stacked fragments
+   (status, date, store, title, price, options) get no vertical air. */
+.sp-content [data-sp-card-body] * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 /* Stray imagery inside the details cell (color swatches, badges, coupon
    art) stays tiny — the thumbnail already shows the product. */
-.sp-mode-fallback [data-sp-card-body] img {
+.sp-content [data-sp-card-body] img {
   max-height: 0.35in !important;
 }
 

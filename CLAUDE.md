@@ -84,7 +84,13 @@ elements. Published free on the Chrome Web Store; no support offered.
   - *Selection mode* (text is selected on the page): print exactly what
     was selected, verbatim — including comments if the user selected
     comments — preserving inline formatting and images, rendered through
-    our clean print template. Page title as header. No stripping.
+    our clean print template. Page title as header. No content
+    stripping. The selection is cloned through the same visible-tree
+    walk as fallback (restricted to the selected range), so hidden
+    machinery (offscreen text twins, hovercards) doesn't print and
+    CSS-background photos do; selected results grids retile as cards.
+    That is rendering fidelity, not filtering — every visibly selected
+    thing prints.
   - *Full-article mode*: comments never appear in the article body.
     Readability handles most of this, but known comment containers (e.g.
     `#comments`, `.comments-section`, `[class*="comment"]`, Substack's
