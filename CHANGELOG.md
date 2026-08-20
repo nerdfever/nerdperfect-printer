@@ -3,16 +3,6 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
-## 1.12 — in progress (testing as 1.11.x builds)
-
-- Reddit post images print reliably: the printout no longer carries
-  reddit's live image components, which could blank the picture at
-  print time even though the preview showed it.
-- Reddit post bylines show the votes: "3067 points (97% upvoted)".
-  (Reddit only publishes the net score and ratio — the raw up/down
-  split hasn't been available since 2014. Comment scores already
-  print.)
-
 ## 1.11 — 2026-08-20
 
 - Account pages on shopping sites (order history and the like) now print
@@ -37,10 +27,13 @@ All notable changes, newest first. Written entirely by Claude
 - The right-click menu items show the version, like the popup title
   does — so it's always clear which installed copy handles the click.
 - Reddit gets a dedicated renderer: posts print as a title line, one
-  compact byline (subreddit, author, age, score), and the content;
-  comments print with the avatar beside the name, points and age on
-  the same line, and replies nested behind a thread guide line. The
-  meme-thread test case went from 24 printed pages to 5.
+  compact byline (subreddit, author, age, net votes with upvote ratio,
+  comment count), and the content; comments print with the avatar
+  beside the name, votes and age on the same line, and replies nested
+  behind a thread guide line. The meme-thread test case went from 24
+  printed pages to 5. Post images print reliably (the printout no
+  longer carries reddit's live image components, which could blank the
+  picture at print time even though the preview showed it).
 - Listing cards use the page's width like the screen does: the details
   flow in two columns beside the thumbnail, halving card height
   without cramped spacing.

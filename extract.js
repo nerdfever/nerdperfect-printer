@@ -817,9 +817,11 @@
         (t) => t.closest("shreddit-comment") === el
       );
       const score = el.getAttribute("score");
+      // Reddit's score is the net vote count (ups minus downs — the
+      // only figure reddit publishes).
       const meta = [
         ago ? (ago.textContent || "").trim() : "",
-        score && Number(score) > 1 ? score + " points" : "",
+        score && Number(score) > 1 ? score + " votes" : "",
       ].filter(Boolean).join(" · ");
       if (meta) {
         const span = document.createElement("span");
@@ -863,9 +865,9 @@
 
     const wrap = document.createElement("div");
 
-    // One header line: subreddit, author, age, votes, comment count.
-    // Reddit exposes only the net score plus (for posts) the upvote
-    // ratio — the raw up/down split hasn't been public API since 2014.
+    // One header line: subreddit, author, age, net votes, comment
+    // count. Reddit exposes only the net score plus (for posts) the
+    // upvote ratio — the raw up/down split hasn't been public since 2014.
     const head = document.createElement("div");
     head.setAttribute("data-sp-comment-head", "1");
     const ago = post.querySelector("faceplate-timeago, time");
@@ -875,7 +877,7 @@
       post.getAttribute("author") ? "u/" + post.getAttribute("author") : "",
       ago ? (ago.textContent || "").trim() : "",
       post.getAttribute("score")
-        ? post.getAttribute("score") + " points" +
+        ? post.getAttribute("score") + " votes" +
           (ratio ? " (" + Math.round(ratio * 100) + "% upvoted)" : "")
         : "",
       post.getAttribute("comment-count") ? post.getAttribute("comment-count") + " comments" : "",
