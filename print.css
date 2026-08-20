@@ -122,10 +122,10 @@ body {
   margin-top: 0.25em;
   break-inside: avoid;
 
-  /* A card is a catalog row, not prose: smaller and tighter, so the
-     printed list approaches the screen's density. */
-  font-size: 0.85em;
-  line-height: 1.3;
+  /* A card is a catalog row, not prose: a bit smaller than body text,
+     but not cramped — the two-column details cell does the compacting. */
+  font-size: 0.9em;
+  line-height: 1.35;
 }
 
 .sp-content [data-sp-card-thumb] {
@@ -137,24 +137,58 @@ body {
   max-height: 1.1in !important;
 }
 
+/* The details cell flows in two columns, using the card's width the way
+   the screen does — half the height without crushing the line spacing. */
 .sp-content [data-sp-card-body] {
   flex: 1 1 0;
   min-width: 0;
+  column-count: 2;
+  column-gap: 0.25in;
 }
 
-/* The details cell reads as tight rows: the site's stacked fragments
-   (status, date, store, title, price, options) get no vertical air. */
-.sp-content [data-sp-card-body] * {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+/* Fragments never split across the columns' fold. */
+.sp-content [data-sp-card-body] > * {
+  break-inside: avoid;
 }
 
 /* Stray imagery inside the details cell (color swatches, badges, coupon
    art) stays tiny — the thumbnail already shows the product. */
 .sp-content [data-sp-card-body] img {
   max-height: 0.35in !important;
+}
+
+/* Comment threads rebuilt by extract.js (currently reddit): one header
+   line with the avatar beside the name — as on screen — the body under
+   it, and each reply nested behind a thread guide line so who-answers-
+   whom survives on paper. */
+.sp-content [data-sp-comment] {
+  margin-top: 0.6em;
+}
+
+.sp-content [data-sp-comment] [data-sp-comment] {
+  margin-left: 0.08in;
+  padding-left: 0.14in;
+  border-left: 1.5px solid #bbb;
+}
+
+.sp-content [data-sp-comment-head] {
+  font-size: 0.9em;
+}
+
+.sp-content [data-sp-comment-head] img {
+  max-width: 0.16in !important;
+  max-height: 0.16in !important;
+  border-radius: 50%;
+  vertical-align: -0.035in;
+  margin-right: 0.05in;
+}
+
+.sp-content [data-sp-comment-body] {
+  margin-top: 0.1em;
+}
+
+.sp-content [data-sp-comment-body] p {
+  margin: 0.15em 0;
 }
 
 /* Portal pages carry giant result-count and section headings; on paper

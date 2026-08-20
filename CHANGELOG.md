@@ -24,6 +24,16 @@ All notable changes, newest first. Written entirely by Claude
   results grid prints as compact card rows.
 - Printed comment threads keep their reply indentation, rebuilt from
   the on-screen nesting, so you can still see who answers whom.
+- Reddit gets a dedicated renderer: posts print as a title line, one
+  compact byline (subreddit, author, age, score), and the content;
+  comments print with the avatar beside the name, points and age on
+  the same line, and replies nested behind a thread guide line. The
+  meme-thread test case went from 24 printed pages to 5.
+- Listing cards use the page's width like the screen does: the details
+  flow in two columns beside the thumbnail, halving card height
+  without cramped spacing.
+- Select-then-print drops the site's inline styles (as whole-page mode
+  always has), so selections no longer inherit broken screen layout.
 - Reddit threads print sanely: a 100-page printout became 7. Ads (in
   the post, rails, and between comments), "Related posts" tiles, and
   sidebar sign-up columns are left off the paper; per-comment

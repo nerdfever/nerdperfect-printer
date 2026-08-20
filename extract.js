@@ -124,7 +124,9 @@
     stripAds(container);
     removeMatching(container, SP_SITE_WIDGET_SELECTORS);
 
-    // Rebuild the thread's reply indentation from the screen offsets.
+    // Reddit threads render through the comment template; other sites
+    // get their reply indentation rebuilt from the screen offsets.
+    normalizeRedditThread(container);
     indentCommentThreads(container);
 
     absolutizeUrls(container);
@@ -274,10 +276,20 @@
     // NO comment/ad stripping here — a selection prints verbatim.
     removeJunk(container);
 
+    // Drop inline styles, as fallback does: with the site's stylesheets
+    // gone they only fight the print layout (absolute offsets, fixed
+    // widths, flex fragments). The content itself is untouched, and
+    // print colors are forced by print.css anyway.
+    for (const el of container.querySelectorAll("[style]")) {
+      el.removeAttribute("style");
+    }
+
     // Same visual-truth cleanups as fallback (nothing is filtered):
+    // selected reddit threads render through the comment template,
     // zoom/lightbox twins print once, a selected results grid retiles
     // as compact card rows, and selected comment threads keep their
     // reply indentation.
+    normalizeRedditThread(container);
     dedupeImages(container);
     compactResultCards(container);
     indentCommentThreads(container);
@@ -744,16 +756,139 @@
   // Sites can render the same picture twice — zoom/lightbox twins
   // stacked exactly on the visible copy, so both pass every visibility
   // test (Reddit post images). On paper one copy is right: drop
-  // exact-src repeats, keeping the first.
+  // exact-src repeats, keeping the first. Icon-sized images are exempt:
+  // avatars and badges legitimately repeat throughout a thread.
   function dedupeImages(root) {
     const seen = new Set();
     for (const img of root.querySelectorAll("img")) {
+      if (img.hasAttribute("data-sp-icon")) continue;
+
       const src = img.getAttribute("src") || "";
       if (!src) continue;
 
       if (seen.has(src)) img.remove();
       else seen.add(src);
     }
+  }
+
+
+  // -------------------------------------------------------------------------
+  // Reddit special case. Reddit's markup is custom elements whose layout
+  // lives entirely in CSS we discard, so generic cleanup bottoms out at
+  // "readable but ugly": avatars on their own lines, no reply nesting,
+  // acres of wrapper whitespace. The site is big enough to earn a real
+  // renderer: comments and the post are REBUILT from shreddit's own
+  // attributes and slots into our compact template markup
+  // (data-sp-comment / data-sp-comment-head / data-sp-comment-body,
+  // styled in print.css). Only runs when shreddit elements are present.
+  // -------------------------------------------------------------------------
+
+  // Rebuild every shreddit-comment tree in the (cloned) container into
+  // nested data-sp-comment blocks: one header line (avatar, author,
+  // age, score), the comment body, then the replies nested inside.
+  function normalizeRedditThread(container) {
+    // Top-level comments only — replies are handled by recursion.
+    const roots = Array.from(container.querySelectorAll("shreddit-comment")).filter(
+      (el) => !(el.parentElement && el.parentElement.closest("shreddit-comment"))
+    );
+
+    const build = (el) => {
+      const wrap = document.createElement("div");
+      wrap.setAttribute("data-sp-comment", "1");
+
+      // Header line: avatar beside the name, as on screen.
+      const head = document.createElement("div");
+      head.setAttribute("data-sp-comment-head", "1");
+
+      const avatar = el.getAttribute("avatar");
+      if (avatar) {
+        const img = document.createElement("img");
+        img.src = avatar;
+        img.setAttribute("data-sp-icon", "1");
+        head.appendChild(img);
+      }
+
+      const author = document.createElement("strong");
+      author.textContent = el.getAttribute("author") || "[deleted]";
+      head.appendChild(author);
+
+      // Age and score, when present, in small type after the name.
+      const ago = Array.from(el.querySelectorAll("faceplate-timeago, time")).find(
+        (t) => t.closest("shreddit-comment") === el
+      );
+      const score = el.getAttribute("score");
+      const meta = [
+        ago ? (ago.textContent || "").trim() : "",
+        score && Number(score) > 1 ? score + " points" : "",
+      ].filter(Boolean).join(" · ");
+      if (meta) {
+        const span = document.createElement("span");
+        span.setAttribute("data-sp-small", "1");
+        span.textContent = " · " + meta;
+        head.appendChild(span);
+      }
+
+      wrap.appendChild(head);
+
+      // The comment text itself (rich content, verbatim).
+      const body = Array.from(el.querySelectorAll('[slot="comment"], .md')).find(
+        (b) => b.closest("shreddit-comment") === el
+      );
+      if (body) {
+        const bodyWrap = document.createElement("div");
+        bodyWrap.setAttribute("data-sp-comment-body", "1");
+        bodyWrap.innerHTML = body.innerHTML;
+        wrap.appendChild(bodyWrap);
+      }
+
+      // Replies, nested inside so the CSS indentation compounds.
+      for (const child of el.querySelectorAll("shreddit-comment")) {
+        if (child.parentElement && child.parentElement.closest("shreddit-comment") === el) {
+          wrap.appendChild(build(child));
+        }
+      }
+
+      return wrap;
+    };
+
+    for (const root of roots) root.replaceWith(build(root));
+  }
+
+  // Reduce a reddit post page's cloned body to the post itself: header
+  // line, media, and text body. Everything else on the page (vote bars,
+  // composer boxes, join buttons) is screen furniture.
+  function normalizeRedditPost(root) {
+    const post = root.querySelector("shreddit-post");
+    if (!post) return;
+
+    const wrap = document.createElement("div");
+
+    // One header line: subreddit, author, age, score, comment count.
+    const head = document.createElement("div");
+    head.setAttribute("data-sp-comment-head", "1");
+    const ago = post.querySelector("faceplate-timeago, time");
+    head.textContent = [
+      post.getAttribute("subreddit-prefixed-name"),
+      post.getAttribute("author") ? "u/" + post.getAttribute("author") : "",
+      ago ? (ago.textContent || "").trim() : "",
+      post.getAttribute("score") ? post.getAttribute("score") + " points" : "",
+      post.getAttribute("comment-count") ? post.getAttribute("comment-count") + " comments" : "",
+    ].filter(Boolean).join(" · ");
+    wrap.appendChild(head);
+
+    // The post content: media (image/video poster) and/or text body.
+    for (const slot of ['[slot="post-media-container"]', '[slot="text-body"]']) {
+      const part = post.querySelector(slot);
+      if (part) {
+        const div = document.createElement("div");
+        div.innerHTML = part.innerHTML;
+        wrap.appendChild(div);
+      }
+    }
+
+    // The page becomes just the post (the title is already the header).
+    while (root.firstChild) root.removeChild(root.firstChild);
+    root.appendChild(wrap);
   }
 
   function extractFallback() {
@@ -777,6 +912,10 @@
     stripComments(bodyClone);
     stripAds(bodyClone);
     removeMatching(bodyClone, SP_SITE_WIDGET_SELECTORS);
+
+    // On a reddit post page, the body reduces to the post itself.
+    normalizeRedditPost(bodyClone);
+
     dedupeImages(bodyClone);
 
     // Comment threads are stripped from fallback bodies above, but this
