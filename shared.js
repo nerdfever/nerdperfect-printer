@@ -152,6 +152,12 @@ var SP_SITE_WIDGET_SELECTORS = [
   "faceplate-progress",
 ].join(", ");
 
+// Threaded comments: replies are indented on screen; reproduce that on
+// paper from each comment's measured left offset (stamped at clone
+// time), scaled down to save column width and capped per nesting step.
+var SP_COMMENT_INDENT_SCALE = 0.5;
+var SP_COMMENT_INDENT_STEP_MAX_PX = 48;
+
 // Fallback/comments: an image RENDERED at or below this size (both
 // dimensions) is an icon or avatar. It gets tagged data-sp-icon so the
 // print CSS can cap it — with the site's stylesheets gone it would

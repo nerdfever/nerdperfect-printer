@@ -22,6 +22,8 @@ All notable changes, newest first. Written entirely by Claude
   selection prints what you see (no hidden duplicate text, and photos
   the site draws as CSS backgrounds are included), and a selected
   results grid prints as compact card rows.
+- Printed comment threads keep their reply indentation, rebuilt from
+  the on-screen nesting, so you can still see who answers whom.
 - Reddit threads print sanely: a 100-page printout became 7. Ads (in
   the post, rails, and between comments), "Related posts" tiles, and
   sidebar sign-up columns are left off the paper; per-comment

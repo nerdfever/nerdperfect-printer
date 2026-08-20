@@ -124,6 +124,9 @@
     stripAds(container);
     removeMatching(container, SP_SITE_WIDGET_SELECTORS);
 
+    // Rebuild the thread's reply indentation from the screen offsets.
+    indentCommentThreads(container);
+
     absolutizeUrls(container);
 
     return container.innerHTML;
@@ -272,10 +275,12 @@
     removeJunk(container);
 
     // Same visual-truth cleanups as fallback (nothing is filtered):
-    // zoom/lightbox twins print once, and a selected results grid
-    // retiles as compact card rows instead of stacked fragments.
+    // zoom/lightbox twins print once, a selected results grid retiles
+    // as compact card rows, and selected comment threads keep their
+    // reply indentation.
     dedupeImages(container);
     compactResultCards(container);
+    indentCommentThreads(container);
 
     absolutizeUrls(container);
 
@@ -576,6 +581,13 @@
       }
     }
 
+    // Comment-ish elements record their rendered left edge, so reply
+    // indentation can be rebuilt on paper — threads lose who-answers-
+    // whom when reflowed (see indentCommentThreads).
+    if (/comment/i.test(liveEl.tagName) || /comment/i.test(String(liveEl.className))) {
+      copy.setAttribute("data-sp-left", String(Math.round(liveEl.getBoundingClientRect().left)));
+    }
+
     // Keep the site's own de-emphasis: small print stays small on paper.
     if (isSmallPrint(liveEl)) copy.setAttribute("data-sp-small", "1");
 
@@ -697,6 +709,38 @@
     }
   }
 
+  // Threaded comments lose their reply indentation when reflowed — the
+  // screen shows nesting by left offset, which the clone walk stamps on
+  // comment-ish elements as data-sp-left. Convert each element's offset
+  // into a print margin, measured relative to its nearest stamped
+  // ancestor (nested replies accumulate their parents' margins), scaled
+  // down and capped per step so deep threads can't eat the column.
+  function indentCommentThreads(root) {
+    const nodes = Array.from(root.querySelectorAll("[data-sp-left]"));
+
+    // Compute every margin BEFORE stripping the attributes the
+    // ancestor lookups depend on.
+    const margins = new Map();
+    for (const el of nodes) {
+      const left = Number(el.getAttribute("data-sp-left")) || 0;
+
+      const anchor = el.parentElement && el.parentElement.closest("[data-sp-left]");
+      const anchorLeft = anchor ? Number(anchor.getAttribute("data-sp-left")) || 0 : left;
+
+      const indent = Math.min(
+        Math.max(0, (left - anchorLeft) * SP_COMMENT_INDENT_SCALE),
+        SP_COMMENT_INDENT_STEP_MAX_PX
+      );
+      if (indent >= 3) margins.set(el, indent);
+    }
+
+    for (const el of nodes) {
+      const margin = margins.get(el);
+      if (margin) el.style.marginLeft = Math.round(margin) + "px";
+      el.removeAttribute("data-sp-left");
+    }
+  }
+
   // Sites can render the same picture twice — zoom/lightbox twins
   // stacked exactly on the visible copy, so both pass every visibility
   // test (Reddit post images). On paper one copy is right: drop
@@ -734,6 +778,10 @@
     stripAds(bodyClone);
     removeMatching(bodyClone, SP_SITE_WIDGET_SELECTORS);
     dedupeImages(bodyClone);
+
+    // Comment threads are stripped from fallback bodies above, but this
+    // also cleans the clone-time offset stamps off whatever remains.
+    indentCommentThreads(bodyClone);
 
     // Cross-sell recommendation rails go before card retiling, so their
     // product tiles never count as (or survive among) the page's cards.
