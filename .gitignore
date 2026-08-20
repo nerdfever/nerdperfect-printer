@@ -1,6 +1,7 @@
-# Test outputs saved during development — not part of the extension.
-# (.mhtml saves can contain personal page content — the repo is public,
-# so they must never be committed.)
+# Test inputs and outputs saved during development — not part of the
+# extension. (Saved pages and printouts can contain personal content —
+# the repo is public, so they must never be committed.)
+tests/
 *.pdf
 *.mhtml
 
