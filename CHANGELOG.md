@@ -15,6 +15,13 @@ All notable changes, newest first. Written entirely by Claude
   order without its product picture.
 - A listing card's thumbnail is now its most prominent image, not just
   the first one found (which was often a store badge).
+- Reddit threads print sanely: a 100-page printout became 7. Ads (in
+  the post, rails, and between comments), "Related posts" tiles, and
+  sidebar sign-up columns are left off the paper; per-comment
+  share/award/menu widgetry is stripped; comment threads keep only
+  what's visible on screen (no more hidden hovercards printing as
+  blank pages); avatars and badges stay icon-sized on paper; duplicate
+  zoom/lightbox copies of a post's image print once.
 
 ## 1.10 — 2026-07-22
 

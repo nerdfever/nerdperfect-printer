@@ -105,11 +105,25 @@
 
     const container = document.createElement("div");
     for (const el of tops) {
-      if ((el.textContent || "").trim().length < 80) continue;
-      container.appendChild(el.cloneNode(true));
+      // Collapse whitespace before measuring — a sort-dropdown widget
+      // can pad 74 chars of labels past 80 with raw indentation (Reddit).
+      const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+      if (text.length < 80) continue;
+
+      // Clone only what's actually rendered, same as fallback mode — a
+      // raw clone drags in hovercards, tooltips, and hidden overlays
+      // that print as pages of blank machinery (Reddit's comment tree).
+      const kept = cloneVisibleTree(el);
+      if (kept) container.appendChild(kept);
     }
 
     removeJunk(container);
+
+    // Comment threads carry their own ads (Reddit interleaves ad units
+    // between comments) and per-comment UI widgetry — neither prints.
+    stripAds(container);
+    removeMatching(container, SP_SITE_WIDGET_SELECTORS);
+
     absolutizeUrls(container);
 
     return container.innerHTML;
@@ -506,10 +520,15 @@
 
     // Record every image's rendered area, so later passes can tell a
     // product photo from a store badge (retiling picks the biggest
-    // image in a card as its thumbnail).
+    // image in a card as its thumbnail). Icon-sized images are tagged
+    // so print.css can cap them at icon size on paper too.
     if (liveEl.tagName === "IMG") {
       const r = liveEl.getBoundingClientRect();
       copy.setAttribute("data-sp-area", String(Math.round(r.width * r.height)));
+
+      if (r.width <= SP_ICON_MAX_PX && r.height <= SP_ICON_MAX_PX) {
+        copy.setAttribute("data-sp-icon", "1");
+      }
     }
 
     // Shop sites often paint product photos as CSS backgrounds rather
@@ -640,6 +659,21 @@
     }
   }
 
+  // Sites can render the same picture twice — zoom/lightbox twins
+  // stacked exactly on the visible copy, so both pass every visibility
+  // test (Reddit post images). On paper one copy is right: drop
+  // exact-src repeats, keeping the first.
+  function dedupeImages(root) {
+    const seen = new Set();
+    for (const img of root.querySelectorAll("img")) {
+      const src = img.getAttribute("src") || "";
+      if (!src) continue;
+
+      if (seen.has(src)) img.remove();
+      else seen.add(src);
+    }
+  }
+
   function extractFallback() {
     const bodyClone = cloneVisibleTree(document.body) || document.createElement("div");
 
@@ -655,10 +689,13 @@
     }
 
     // Same cleanup as article mode — comments must still never appear
-    // in the page body itself, and ad scraps only waste ink.
+    // in the page body itself, and ad scraps only waste ink. Interactive
+    // widget shells (share/award rows, overflow menus) go with them.
     removeJunk(bodyClone);
     stripComments(bodyClone);
     stripAds(bodyClone);
+    removeMatching(bodyClone, SP_SITE_WIDGET_SELECTORS);
+    dedupeImages(bodyClone);
 
     // Cross-sell recommendation rails go before card retiling, so their
     // product tiles never count as (or survive among) the page's cards.

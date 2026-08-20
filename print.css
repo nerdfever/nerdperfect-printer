@@ -224,6 +224,14 @@ body {
   break-inside: avoid;
 }
 
+/* Images that RENDERED at icon size (avatars, badges — tagged by
+   extract.js from the live layout) stay icon-sized on paper. Without
+   the site's stylesheets they would print at intrinsic file size. */
+.sp-content img[data-sp-icon] {
+  max-width: 0.3in !important;
+  max-height: 0.3in !important;
+}
+
 .sp-content figcaption {
   font-size: 0.85em;
   font-style: italic;

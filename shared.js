@@ -78,6 +78,11 @@ var SP_AD_SELECTORS = [
   ".ad-wrapper",
   ".ad-slot",
   "[data-ad-unit]",
+  "shreddit-comment-tree-ad",  // Reddit: ads interleaved in comment threads
+  "shreddit-dynamic-ad-link",  // Reddit: promoted links in post bodies/rails
+  "shreddit-ad-post",          // Reddit: promoted posts in feeds
+  "[ads-correlation-id]",           // Reddit: any element carrying ad-tracking
+  "[ad-transparency-encoded-data]", //   attributes IS an ad, whatever its tag
 ].join(", ");
 
 // Page chrome stripped ONLY in fallback (whole-page) mode. Fallback pages
@@ -114,6 +119,8 @@ var SP_FALLBACK_CHROME_SELECTORS = [
                               //   they print as duplicated text
   ".a-popover-preload",       // Amazon preloaded popover bodies ("You're
   '[id^="a-popover"]',        //   seeing this ad based on…")
+  "#left-sidebar-container",  // Reddit layout rails: nav column and the
+  "#right-sidebar-container", //   related-posts/sign-up column
 ].join(", ");
 
 // Recommendation rails on shop pages ("More to love", "Customers also
@@ -124,7 +131,33 @@ var SP_FALLBACK_CHROME_SELECTORS = [
 var SP_RECOMMEND_SELECTORS = [
   '[class*="recommend"]',
   '[id*="recommend"]',
+  "reddit-pdp-right-rail-post",   // Reddit "Related posts" tiles
 ].join(", ");
+
+// Interactive site widgets that mean nothing on paper: vote/share/award
+// rows, overflow menus, sort dropdowns, loading spinners. Custom-element
+// tag names (Reddit's shreddit UI so far — the list grows as sites are
+// met); the print CSS already hides real <button> elements, but these
+// wrappers aren't buttons. Stripped from fallback pages and from
+// captured comment threads. NEVER applied in selection mode.
+var SP_SITE_WIDGET_SELECTORS = [
+  "shreddit-comment-action-row",
+  "shreddit-comment-share-button",
+  "shreddit-overflow-menu",
+  "shreddit-post-overflow-menu",
+  "shreddit-sort-dropdown",
+  "award-button",
+  "rpl-dropdown",
+  "faceplate-loader",
+  "faceplate-progress",
+].join(", ");
+
+// Fallback/comments: an image RENDERED at or below this size (both
+// dimensions) is an icon or avatar. It gets tagged data-sp-icon so the
+// print CSS can cap it — with the site's stylesheets gone it would
+// otherwise print at its intrinsic file size (a 32px avatar can be a
+// 256px file: 2.7 inches of face per comment).
+var SP_ICON_MAX_PX = 48;
 
 // Fallback mode: an element painting a CSS background-image at least this
 // big (rendered, both dimensions) is treated as a real content image —
