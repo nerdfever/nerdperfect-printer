@@ -24,6 +24,8 @@ All notable changes, newest first. Written entirely by Claude
   results grid prints as compact card rows.
 - Printed comment threads keep their reply indentation, rebuilt from
   the on-screen nesting, so you can still see who answers whom.
+- The right-click menu items show the version, like the popup title
+  does — so it's always clear which installed copy handles the click.
 - Reddit gets a dedicated renderer: posts print as a title line, one
   compact byline (subreddit, author, age, score), and the content;
   comments print with the avatar beside the name, points and age on

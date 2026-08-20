@@ -18,17 +18,23 @@ importScripts("shared.js");
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onInstalled.addListener(() => {
+  // The version in the label serves the same job as in the popup title:
+  // confirming WHICH build handles the click. (With a store copy and a
+  // dev copy both installed, the two register identically-named items —
+  // indistinguishable without this.)
+  const version = chrome.runtime.getManifest().version_name;
+
   // Recreate from scratch so updates never duplicate entries.
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "smart-print-page",
-      title: "Print page with NerdPerfect Printer",
+      title: `Print page with NerdPerfect Printer ${version}`,
       contexts: ["page"],
     });
 
     chrome.contextMenus.create({
       id: "smart-print-selection",
-      title: "Print selection with NerdPerfect Printer",
+      title: `Print selection with NerdPerfect Printer ${version}`,
       contexts: ["selection"],
     });
   });
