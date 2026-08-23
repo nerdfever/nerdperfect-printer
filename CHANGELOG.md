@@ -3,6 +3,17 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.12 — in progress (testing as 1.11.x builds)
+
+- An image that almost fits at the bottom of a page is downscaled a
+  little (never below 60%) to stay on the page with its text, instead
+  of being pushed whole to the next page — a tall lead photo no longer
+  strands the first page half-empty.
+- Images the preview can't load (news-site CDNs that want the page's
+  cookies; they print fine) now show as a correctly-sized placeholder,
+  so the preview's page count and layout match the printout.
+- "Print all" prints exactly the content the preview showed.
+
 ## 1.11 — 2026-08-20
 
 - Account pages on shopping sites (order history and the like) now print

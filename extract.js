@@ -50,6 +50,27 @@
     for (const a of root.querySelectorAll("a[href]")) {
       if (a.href) a.setAttribute("href", a.href);
     }
+
+    // Stamp each image's rendered size while the live page can still be
+    // measured. The popup uses the stamps to reserve a correct box for
+    // images its preview context can't load (cookie- or referrer-guarded
+    // CDNs — they load fine when printing in the page itself), keeping
+    // the pagination honest.
+    const liveSize = new Map();
+    for (const live of document.images) {
+      const r = live.getBoundingClientRect();
+      if (r.width >= 2 && r.height >= 2) {
+        const key = live.currentSrc || live.src;
+        if (key && !liveSize.has(key)) liveSize.set(key, r);
+      }
+    }
+    for (const img of root.querySelectorAll("img:not([data-sp-w])")) {
+      const r = liveSize.get(img.getAttribute("src"));
+      if (r) {
+        img.setAttribute("data-sp-w", String(Math.round(r.width)));
+        img.setAttribute("data-sp-h", String(Math.round(r.height)));
+      }
+    }
   }
 
   // Remove elements that must never reach the print template.
@@ -569,6 +590,8 @@
     if (liveEl.tagName === "IMG") {
       const r = liveEl.getBoundingClientRect();
       copy.setAttribute("data-sp-area", String(Math.round(r.width * r.height)));
+      copy.setAttribute("data-sp-w", String(Math.round(r.width)));
+      copy.setAttribute("data-sp-h", String(Math.round(r.height)));
 
       if (r.width <= SP_ICON_MAX_PX && r.height <= SP_ICON_MAX_PX) {
         copy.setAttribute("data-sp-icon", "1");
@@ -588,6 +611,8 @@
           const img = document.createElement("img");
           img.src = m[1];
           img.setAttribute("data-sp-area", String(Math.round(r.width * r.height)));
+          img.setAttribute("data-sp-w", String(Math.round(r.width)));
+          img.setAttribute("data-sp-h", String(Math.round(r.height)));
           copy.appendChild(img);
         }
       }
@@ -904,6 +929,9 @@
         const clean = document.createElement("img");
         clean.src = src;
         if (img.getAttribute("alt")) clean.alt = img.getAttribute("alt");
+        for (const attr of ["data-sp-area", "data-sp-w", "data-sp-h"]) {
+          if (img.hasAttribute(attr)) clean.setAttribute(attr, img.getAttribute(attr));
+        }
         fig.appendChild(clean);
         wrap.appendChild(fig);
       }

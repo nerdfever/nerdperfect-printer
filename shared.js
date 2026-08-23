@@ -156,6 +156,14 @@ var SP_SITE_WIDGET_SELECTORS = [
 // (area, px²) count as post content — smaller ones are icons/badges.
 var SP_POST_MEDIA_MIN_AREA_PX = 10000;
 
+// An image pushed whole to the next page (break-inside: avoid) leaves a
+// gap behind. If shrinking it — down to this fraction of its laid-out
+// size — lets it stay on the page where its text wants it, shrink it.
+// Below the floor, pushing reads better than a postage stamp.
+var SP_IMG_FIT_MIN_SCALE = 0.6;
+var SP_IMG_FIT_SLACK_PX = 8;      // breathing room under the exact gap
+var SP_IMG_FIT_MIN_HEIGHT_PX = 120;  // smaller images never win a page push
+
 // Threaded comments: replies are indented on screen; reproduce that on
 // paper from each comment's measured left offset (stamped at clone
 // time), scaled down to save column width and capped per nesting step.
@@ -338,6 +346,147 @@ function spWaitForImages(doc, timeoutMs) {
   const timeout = new Promise((resolve) => setTimeout(resolve, timeoutMs));
 
   return Promise.race([allDone, timeout]);
+}
+
+
+// ---------------------------------------------------------------------------
+// Pagination model (popup preview and one-sheet fitting both use this;
+// it mirrors how the print engine breaks pages)
+// ---------------------------------------------------------------------------
+
+// The vertical extent of every unbreakable atom in `flow`: each text
+// line box, plus images/figures/cards (break-inside: avoid keeps those
+// whole). Tops/bottoms are relative to the flow's top edge.
+function spCollectAtoms(doc, flow) {
+  const flowTop = flow.getBoundingClientRect().top;
+  const atoms = [];
+
+  const walker = doc.createTreeWalker(flow, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const tn = walker.currentNode;
+    if (!tn.data.trim()) continue;
+
+    const range = doc.createRange();
+    range.selectNodeContents(tn);
+    for (const r of range.getClientRects()) {
+      if (r.height > 0) atoms.push({ top: r.top - flowTop, bottom: r.bottom - flowTop });
+    }
+  }
+
+  for (const el of flow.querySelectorAll("img, svg, canvas, figure, [data-sp-card]")) {
+    const r = el.getBoundingClientRect();
+    if (r.height > 0) atoms.push({ top: r.top - flowTop, bottom: r.bottom - flowTop });
+  }
+
+  atoms.sort((a, b) => a.top - b.top);
+  return atoms;
+}
+
+// Y positions (relative to the flow's top) where a page may break without
+// slicing through a line of text, an image, or a figure — the same rule
+// the print engine follows when it pushes a straddling line to the next
+// page.
+function spComputePageBreaks(doc, flow, pageH) {
+  const flowHeight = Math.max(flow.scrollHeight, 1);
+  const atoms = spCollectAtoms(doc, flow);
+
+  // Walk down a page at a time; any atom straddling the tentative break
+  // pulls the break up to its own top edge (i.e. the atom moves to the
+  // next page). Repeat until nothing straddles.
+  const breaks = [0];
+  let start = 0;
+  let guard = 5000;
+
+  while (start + pageH < flowHeight && guard-- > 0) {
+    let breakY = start + pageH;
+
+    let changed = true;
+    while (changed && guard-- > 0) {
+      changed = false;
+      for (const a of atoms) {
+        if (a.top >= breakY) break;   // sorted by top — no straddlers past here
+        if (a.bottom > breakY) {
+          breakY = a.top;
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    // Degenerate case (an atom taller than the whole page): hard-slice.
+    if (breakY <= start + 40) breakY = start + pageH;
+
+    breaks.push(breakY);
+    start = breakY;
+  }
+
+  return { breaks, flowHeight };
+}
+
+// An image that ALMOST fit gets pushed whole to the next page, leaving a
+// gap behind (a tall lead photo after two paragraphs of a fresh article,
+// say). Find each pushed image; when shrinking it into the gap keeps it
+// on the page its text wants — never below SP_IMG_FIT_MIN_SCALE of its
+// laid-out size — cap its height inline (!important, to outrank the
+// print stylesheet) and re-measure. The caps ride with the content into
+// the actual print job, so paper matches the preview.
+async function spShrinkImagesToFit(doc, flow, pageH) {
+  let guard = 10;
+
+  while (guard-- > 0) {
+    const { breaks } = spComputePageBreaks(doc, flow, pageH);
+    const atoms = spCollectAtoms(doc, flow);
+    const flowTop = flow.getBoundingClientRect().top;
+
+    let changed = false;
+
+    for (const img of flow.querySelectorAll("img")) {
+      if (img.hasAttribute("data-sp-fitted")) continue;
+
+      // What the print engine pushes is the whole figure when there is one.
+      const unit = img.closest("figure") || img;
+      const ur = unit.getBoundingClientRect();
+      const unitTop = ur.top - flowTop;
+      if (ur.height < SP_IMG_FIT_MIN_HEIGHT_PX) continue;
+
+      // "Pushed" = the unit sits exactly at the start of a page (not page 1).
+      const bi = breaks.findIndex((b, i) => i > 0 && Math.abs(b - unitTop) < 2);
+      if (bi < 0) continue;
+
+      // The gap it left: from the bottom of the last atom that stayed on
+      // the previous page to that page's end.
+      const prevStart = breaks[bi - 1];
+      let lastBottom = prevStart;
+      for (const a of atoms) {
+        if (a.bottom <= unitTop + 1 && a.bottom > lastBottom) lastBottom = a.bottom;
+      }
+      const gap = prevStart + pageH - lastBottom - SP_IMG_FIT_SLACK_PX;
+
+      // Only the image shrinks — captions keep their height, and the
+      // unit's own margins (outside its rect) still take up page space —
+      // so the image's budget is the gap minus all that overhead.
+      const ir = img.getBoundingClientRect();
+      const ucs = doc.defaultView.getComputedStyle(unit);
+      const overhead =
+        (ur.height - ir.height) +
+        (parseFloat(ucs.marginTop) || 0) +
+        (parseFloat(ucs.marginBottom) || 0);
+      const targetH = gap - overhead;
+
+      if (targetH >= ir.height) continue;                        // would fit anyway
+      if (targetH < ir.height * SP_IMG_FIT_MIN_SCALE) continue;  // too much shrink
+
+      img.style.setProperty("max-height", Math.floor(targetH) + "px", "important");
+      img.setAttribute("data-sp-fitted", "1");
+      changed = true;
+      break;   // reflow, then look again with fresh geometry
+    }
+
+    if (!changed) return;
+
+    // Let the layout settle before the next measurement pass.
+    await new Promise((resolve) => doc.defaultView.requestAnimationFrame(() => resolve()));
+  }
 }
 
 // The content HTML to render: the article/selection itself, plus the

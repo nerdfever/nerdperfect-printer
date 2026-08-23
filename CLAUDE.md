@@ -67,8 +67,9 @@ elements. Published free on the Chrome Web Store; no support offered.
 - **Fallback retiles results grids as cards**: 4+ same-tag siblings each
   pairing an image with ≥30 chars of text = a listing grid; each tile
   becomes a thumbnail-left ruled row (`[data-sp-card]`, styled in
-  print.css, unbreakable across pages — mirrored in popup.js's
-  pagination atoms). Beats both Chrome and Printdeck on Amazon.
+  print.css, unbreakable across pages — mirrored in the pagination
+  atoms, spCollectAtoms in shared.js). Beats both Chrome and Printdeck
+  on Amazon.
 
 - **Printing happens in the article's own tab** (no render tab): the
   cleaned printout is injected hidden into the page, revealed only under

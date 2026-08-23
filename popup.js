@@ -220,7 +220,40 @@ async function renderDocInto(iframe, contentHtml) {
   // Images change heights as they arrive — wait for them (with timeout).
   await spWaitForImages(doc, 3000);
 
+  // Images this context can't load (cookie/referrer-guarded CDNs — they
+  // load fine when printing in the page itself): give each its real
+  // rendered size from the extraction stamps, as a grey stand-in, so
+  // the pagination is honest and the reader sees where the picture goes.
+  // Inline !important outranks print.css's own sizing; the stand-in
+  // styles are stripped again before the content is sent to print.
+  const maxW = spPaperMetrics(settings.paper).contentWidthPx;
+  for (const img of doc.images) {
+    if (!(img.complete && img.naturalWidth === 0)) continue;
+
+    const w = Number(img.getAttribute("data-sp-w")) || 0;
+    const h = Number(img.getAttribute("data-sp-h")) || 0;
+    if (!w || !h) continue;
+
+    const scale = Math.min(1, maxW / w);
+    img.style.setProperty("width", Math.round(w * scale) + "px", "important");
+    img.style.setProperty("height", Math.round(h * scale) + "px", "important");
+    img.style.setProperty("background", "#e8e8e8", "important");
+    img.setAttribute("data-sp-ghost", "1");
+  }
+
   return doc;
+}
+
+// Strip the preview-only stand-in sizing off ghost images, keeping any
+// fit cap (which is aspect-safe: max-height with width auto). Runs on a
+// clone right before content is handed to the printer.
+function stripGhostSizing(root) {
+  for (const img of root.querySelectorAll("[data-sp-ghost]")) {
+    img.style.removeProperty("width");
+    img.style.removeProperty("height");
+    img.style.removeProperty("background");
+    img.removeAttribute("data-sp-ghost");
+  }
 }
 
 
@@ -248,6 +281,11 @@ async function renderPreview() {
   el.preview.style.width = metrics.paperWidthPx + "px";
   const doc = await renderDocInto(el.preview, spComposeContentHtml(payload, settings));
   if (token !== renderToken) return;   // superseded by a newer render
+
+  // Shrink almost-fitting images into the page gaps they'd otherwise
+  // leave behind (the caps ride into the print job, so paper matches).
+  await spShrinkImagesToFit(doc, doc.body, metrics.contentHeightPx);
+  if (token !== renderToken) return;
 
   // Restructure the document into a hidden measuring flow plus a stack
   // of visible paper sheets.
@@ -325,69 +363,10 @@ function setupPreviewSheets(doc, metrics) {
   doc.body.appendChild(sheets);
 }
 
-// Y positions (relative to the flow's top) where a page may break without
-// slicing through a line of text, an image, or a figure — the same rule
-// the print engine follows when it pushes a straddling line to the next
-// page.
-function computePageBreaks(doc, flow, pageH) {
-  const flowTop = flow.getBoundingClientRect().top;
-  const flowHeight = Math.max(flow.scrollHeight, 1);
-
-  // Collect the vertical extent of every unbreakable atom: each text
-  // line box, plus images/figures (break-inside: avoid keeps those whole).
-  const atoms = [];
-
-  const walker = doc.createTreeWalker(flow, NodeFilter.SHOW_TEXT);
-  while (walker.nextNode()) {
-    const tn = walker.currentNode;
-    if (!tn.data.trim()) continue;
-
-    const range = doc.createRange();
-    range.selectNodeContents(tn);
-    for (const r of range.getClientRects()) {
-      if (r.height > 0) atoms.push({ top: r.top - flowTop, bottom: r.bottom - flowTop });
-    }
-  }
-
-  for (const el of flow.querySelectorAll("img, svg, canvas, figure, [data-sp-card]")) {
-    const r = el.getBoundingClientRect();
-    if (r.height > 0) atoms.push({ top: r.top - flowTop, bottom: r.bottom - flowTop });
-  }
-
-  atoms.sort((a, b) => a.top - b.top);
-
-  // Walk down a page at a time; any atom straddling the tentative break
-  // pulls the break up to its own top edge (i.e. the atom moves to the
-  // next page). Repeat until nothing straddles.
-  const breaks = [0];
-  let start = 0;
-  let guard = 5000;
-
-  while (start + pageH < flowHeight && guard-- > 0) {
-    let breakY = start + pageH;
-
-    let changed = true;
-    while (changed && guard-- > 0) {
-      changed = false;
-      for (const a of atoms) {
-        if (a.top >= breakY) break;   // sorted by top — no straddlers past here
-        if (a.bottom > breakY) {
-          breakY = a.top;
-          changed = true;
-          break;
-        }
-      }
-    }
-
-    // Degenerate case (an atom taller than the whole page): hard-slice.
-    if (breakY <= start + 40) breakY = start + pageH;
-
-    breaks.push(breakY);
-    start = breakY;
-  }
-
-  return { breaks, flowHeight };
-}
+// The pagination model itself (atom collection, page breaks, and the
+// shrink-images-to-fit pass) lives in shared.js — spCollectAtoms,
+// spComputePageBreaks, spShrinkImagesToFit — shared with the one-sheet
+// fitting below and testable outside the popup.
 
 // Measure the flowed content and rebuild the sheet stack to match: each
 // sheet shows the slice of a full clone that ends at the last line that
@@ -397,7 +376,7 @@ function syncPreviewGeometry(doc, metrics) {
   const sheets = doc.querySelector(".pv-sheets");
 
   // Where each page starts, breaking only between lines.
-  const { breaks, flowHeight } = computePageBreaks(doc, flow, metrics.contentHeightPx);
+  const { breaks, flowHeight } = spComputePageBreaks(doc, flow, metrics.contentHeightPx);
   const pages = breaks.length;
 
   // Rebuild the sheets: sheet k clips from its break to the next one.
@@ -502,6 +481,10 @@ async function buildOneSheetHtml() {
 
   const metrics = spPaperMetrics(settings.paper);
 
+  // Same almost-fit image shrinking as the preview, so the cut point and
+  // the printed sheet agree with what the user saw.
+  await spShrinkImagesToFit(doc, doc.body, metrics.contentHeightPx);
+
   // One physical sheet: both sides on a double-sided printer, one side
   // on a single-sided one.
   const pagesPerSheet = settings.duplex ? 2 : 1;
@@ -513,7 +496,7 @@ async function buildOneSheetHtml() {
   // lines and images get pushed to the next page. Plain height division
   // misses that — an image shoved whole onto page 2 can cascade content
   // onto page 3 (seen with the Substack flag image).
-  const paged = computePageBreaks(doc, doc.body, metrics.contentHeightPx);
+  const paged = spComputePageBreaks(doc, doc.body, metrics.contentHeightPx);
 
   // Already fits on the sheet? Print everything, no ellipsis.
   if (paged.breaks.length <= pagesPerSheet) return null;
@@ -547,7 +530,7 @@ async function buildOneSheetHtml() {
   // onto an extra page AND the footer clears the cushion.
   let guard = 120;
   while (
-    (computePageBreaks(doc, doc.body, metrics.contentHeightPx).breaks.length > pagesPerSheet ||
+    (spComputePageBreaks(doc, doc.body, metrics.contentHeightPx).breaks.length > pagesPerSheet ||
       footer.getBoundingClientRect().bottom > limit - cushion) &&
     guard-- > 0
   ) {
@@ -560,6 +543,10 @@ async function buildOneSheetHtml() {
 
     placeEllipsis(content, ellipsis);
   }
+
+  // Stand-in sizing was for measurement only — the page loads the real
+  // images at print time.
+  stripGhostSizing(content);
 
   return content.innerHTML;
 }
@@ -677,6 +664,23 @@ function placeEllipsis(content, ellipsis) {
 // Printing
 // ---------------------------------------------------------------------------
 
+// The preview's content, as it stands right now, ready for printing:
+// fit caps kept, preview-only stand-in sizing stripped.
+function grabPreviewContentHtml() {
+  try {
+    const doc = el.preview.contentDocument;
+    const content = doc && doc.querySelector(".pv-flow .sp-content");
+    if (!content) return null;
+
+    const clone = content.cloneNode(true);
+    stripGhostSizing(clone);
+
+    return clone.innerHTML;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Hand a print job to the service worker (which opens the render tab) and
 // close the popup. oneSheet=true routes through the truncation pass first.
 async function printJob(oneSheet) {
@@ -689,6 +693,12 @@ async function printJob(oneSheet) {
     if (oneSheet) {
       showStatus("Fitting to one sheet…", "");
       contentHtml = await buildOneSheetHtml();
+    } else {
+      // Print all: print exactly what the preview shows — including any
+      // images shrunk to fit their page — rather than recomposing from
+      // scratch in the worker. Falls back to recomposition (null) if the
+      // preview isn't ready.
+      contentHtml = grabPreviewContentHtml();
     }
 
     // Hand off to the service worker, which injects the in-page printer
