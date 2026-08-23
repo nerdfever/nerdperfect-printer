@@ -10,8 +10,9 @@ All notable changes, newest first. Written entirely by Claude
   of being pushed whole to the next page — a tall lead photo no longer
   strands the first page half-empty.
 - Images the preview can't load (news-site CDNs that want the page's
-  cookies; they print fine) now show as a correctly-sized placeholder,
-  so the preview's page count and layout match the printout.
+  cookies; they print fine) now show as a correctly-sized placeholder
+  labeled "image — appears when printed", so the preview's page count
+  and layout match the printout.
 - "Print all" prints exactly the content the preview showed.
 
 ## 1.11 — 2026-08-20

@@ -383,6 +383,11 @@ function syncPreviewGeometry(doc, metrics) {
     inner.className = "pv-inner";
     inner.style.marginTop = -sliceTop + "px";
 
+    // Ghost images are bare grey boxes; label them in the visible sheets
+    // (never in the flow — that's what prints) so the reader knows the
+    // picture is coming.
+    labelGhosts(inner);
+
     clip.appendChild(inner);
     sheet.appendChild(clip);
 
@@ -409,6 +414,28 @@ function syncPreviewGeometry(doc, metrics) {
 
   // Status line: the page count.
   updateStatus(pages);
+}
+
+// Replace each ghost image (a bare grey box standing in for a picture
+// the popup can't load) with a labeled placeholder of the same size.
+// Display-only: runs on sheet clones, never on the flow that prints.
+function labelGhosts(root) {
+  for (const img of root.querySelectorAll("img[data-sp-ghost]")) {
+    const box = root.ownerDocument.createElement("div");
+
+    // Same box the ghost occupied (its sizing lives in inline styles).
+    box.style.cssText = img.style.cssText;
+    box.style.setProperty("display", "flex", "important");
+    box.style.setProperty("align-items", "center", "important");
+    box.style.setProperty("justify-content", "center", "important");
+    box.style.setProperty("border", "1px dashed #bbb", "important");
+    box.style.setProperty("box-sizing", "border-box", "important");
+    box.style.setProperty("color", "#999", "important");
+    box.style.setProperty("font", "italic 13px system-ui, sans-serif", "important");
+
+    box.textContent = "image — appears when printed";
+    img.replaceWith(box);
+  }
 }
 
 // One simulated Chrome header or footer line: left and right text spans.
