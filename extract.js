@@ -60,8 +60,12 @@
     for (const live of document.images) {
       const r = live.getBoundingClientRect();
       if (r.width >= 2 && r.height >= 2) {
-        const key = live.currentSrc || live.src;
-        if (key && !liveSize.has(key)) liveSize.set(key, r);
+        // Register BOTH identities: a clone held in an inert template
+        // never loads, so its baked src can be the original attribute
+        // URL while the live element shows a srcset variant.
+        for (const key of [live.currentSrc, live.src]) {
+          if (key && !liveSize.has(key)) liveSize.set(key, r);
+        }
       }
     }
     for (const img of root.querySelectorAll("img:not([data-sp-w])")) {
@@ -378,6 +382,14 @@
     const img = document.createElement("img");
     img.src = best.currentSrc || best.src;
     if (best.alt) img.alt = best.alt;
+
+    // This img is created AFTER the stamping pass in absolutizeUrls has
+    // run, so it stamps its own rendered size (the popup needs it to
+    // stand in for images the preview context can't load).
+    const r = best.getBoundingClientRect();
+    img.setAttribute("data-sp-w", String(Math.round(r.width)));
+    img.setAttribute("data-sp-h", String(Math.round(r.height)));
+
     fig.appendChild(img);
     holder.content.prepend(fig);
   }
