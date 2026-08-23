@@ -164,6 +164,12 @@ var SP_IMG_FIT_MIN_SCALE = 0.6;
 var SP_IMG_FIT_SLACK_PX = 8;      // breathing room under the exact gap
 var SP_IMG_FIT_MIN_HEIGHT_PX = 120;  // smaller images never win a page push
 
+// Preview stand-ins: an image whose natural width comes in below this
+// fraction of its stamped (live-rendered) width did not really load —
+// guarded CDNs return tiny error images with HTTP 500 (LA Times), which
+// count as a "successful" load. The real page prints the real picture.
+var SP_GHOST_MIN_NATURAL_RATIO = 0.3;
+
 // Threaded comments: replies are indented on screen; reproduce that on
 // paper from each comment's measured left offset (stamped at clone
 // time), scaled down to save column width and capped per nesting step.
@@ -423,6 +429,30 @@ function spComputePageBreaks(doc, flow, pageH) {
   return { breaks, flowHeight };
 }
 
+// Give a grey, correctly-sized stand-in to every image that did not
+// genuinely load in this document: still pending after the image wait,
+// errored, or "loaded" as a tiny CDN error stub far below its stamped
+// live size (SP_GHOST_MIN_NATURAL_RATIO). The stand-in keeps pagination
+// honest; its styles are stripped again before printing, where the real
+// page loads the real picture. `maxW` is the print column width.
+function spGhostUnloadedImages(doc, maxW) {
+  for (const img of doc.images) {
+    const w = Number(img.getAttribute("data-sp-w")) || 0;
+    const h = Number(img.getAttribute("data-sp-h")) || 0;
+    if (!w || !h) continue;
+
+    const loadedRight =
+      img.complete && img.naturalWidth >= w * SP_GHOST_MIN_NATURAL_RATIO;
+    if (loadedRight) continue;
+
+    const scale = Math.min(1, maxW / w);
+    img.style.setProperty("width", Math.round(w * scale) + "px", "important");
+    img.style.setProperty("height", Math.round(h * scale) + "px", "important");
+    img.style.setProperty("background", "#e8e8e8", "important");
+    img.setAttribute("data-sp-ghost", "1");
+  }
+}
+
 // An image that ALMOST fit gets pushed whole to the next page, leaving a
 // gap behind (a tall lead photo after two paragraphs of a fresh article,
 // say). Find each pushed image; when shrinking it into the gap keeps it
@@ -477,6 +507,20 @@ async function spShrinkImagesToFit(doc, flow, pageH) {
       if (targetH < ir.height * SP_IMG_FIT_MIN_SCALE) continue;  // too much shrink
 
       img.style.setProperty("max-height", Math.floor(targetH) + "px", "important");
+
+      // A stand-in has a fixed width; shrink it in proportion so the
+      // ghost box keeps the picture's shape.
+      if (img.hasAttribute("data-sp-ghost")) {
+        const ghostW = parseFloat(img.style.width) || 0;
+        if (ghostW) {
+          img.style.setProperty(
+            "width",
+            Math.round((ghostW * targetH) / ir.height) + "px",
+            "important"
+          );
+        }
+      }
+
       img.setAttribute("data-sp-fitted", "1");
       changed = true;
       break;   // reflow, then look again with fresh geometry

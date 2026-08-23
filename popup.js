@@ -221,25 +221,12 @@ async function renderDocInto(iframe, contentHtml) {
   await spWaitForImages(doc, 3000);
 
   // Images this context can't load (cookie/referrer-guarded CDNs — they
-  // load fine when printing in the page itself): give each its real
-  // rendered size from the extraction stamps, as a grey stand-in, so
-  // the pagination is honest and the reader sees where the picture goes.
-  // Inline !important outranks print.css's own sizing; the stand-in
-  // styles are stripped again before the content is sent to print.
-  const maxW = spPaperMetrics(settings.paper).contentWidthPx;
-  for (const img of doc.images) {
-    if (!(img.complete && img.naturalWidth === 0)) continue;
-
-    const w = Number(img.getAttribute("data-sp-w")) || 0;
-    const h = Number(img.getAttribute("data-sp-h")) || 0;
-    if (!w || !h) continue;
-
-    const scale = Math.min(1, maxW / w);
-    img.style.setProperty("width", Math.round(w * scale) + "px", "important");
-    img.style.setProperty("height", Math.round(h * scale) + "px", "important");
-    img.style.setProperty("background", "#e8e8e8", "important");
-    img.setAttribute("data-sp-ghost", "1");
-  }
+  // load fine when printing in the page itself, and some "load" as tiny
+  // error stubs): give each its real rendered size from the extraction
+  // stamps, as a grey stand-in, so the pagination is honest and the
+  // reader sees where the picture goes. The stand-in styles are
+  // stripped again before the content is sent to print.
+  spGhostUnloadedImages(doc, spPaperMetrics(settings.paper).contentWidthPx);
 
   return doc;
 }
