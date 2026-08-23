@@ -416,25 +416,30 @@ function syncPreviewGeometry(doc, metrics) {
   updateStatus(pages);
 }
 
-// Replace each ghost image (a bare grey box standing in for a picture
-// the popup can't load) with a labeled placeholder of the same size.
-// Display-only: runs on sheet clones, never on the flow that prints.
+// Label each ghost image (a bare grey box standing in for a picture the
+// popup can't load) by swapping its pixels for a generated SVG with the
+// note drawn in. The ELEMENT is untouched — same tag, same inline
+// sizing, same baseline — so the sheet clones lay out identically to
+// the measuring flow (replacing the img with a div shifted everything
+// below it by the inline-image baseline gap, and the page clips then
+// sliced through text). Display-only: runs on sheet clones, never on
+// the flow that prints.
 function labelGhosts(root) {
   for (const img of root.querySelectorAll("img[data-sp-ghost]")) {
-    const box = root.ownerDocument.createElement("div");
+    const w = Math.max(40, parseFloat(img.style.width) || 300);
+    const h = Math.max(24, parseFloat(img.style.height) || 200);
 
-    // Same box the ghost occupied (its sizing lives in inline styles).
-    box.style.cssText = img.style.cssText;
-    box.style.setProperty("display", "flex", "important");
-    box.style.setProperty("align-items", "center", "important");
-    box.style.setProperty("justify-content", "center", "important");
-    box.style.setProperty("border", "1px dashed #bbb", "important");
-    box.style.setProperty("box-sizing", "border-box", "important");
-    box.style.setProperty("color", "#999", "important");
-    box.style.setProperty("font", "italic 13px system-ui, sans-serif", "important");
+    const svg =
+      `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>` +
+      `<rect x='1' y='1' width='${w - 2}' height='${h - 2}'` +
+      ` fill='#ececec' stroke='#bbb' stroke-dasharray='6 4'/>` +
+      `<text x='50%' y='50%' text-anchor='middle' dominant-baseline='middle'` +
+      ` font-family='system-ui, sans-serif' font-size='13' font-style='italic'` +
+      ` fill='#999'>image — appears when printed</text>` +
+      `</svg>`;
 
-    box.textContent = "image — appears when printed";
-    img.replaceWith(box);
+    img.src = "data:image/svg+xml," + encodeURIComponent(svg);
+    img.style.removeProperty("background");
   }
 }
 
