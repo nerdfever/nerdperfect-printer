@@ -3,7 +3,7 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
-## 1.12 — in progress (testing as 1.11.x builds)
+## 1.12 — 2026-08-23
 
 - An image that almost fits at the bottom of a page is downscaled a
   little (never below 60%) to stay on the page with its text, instead
