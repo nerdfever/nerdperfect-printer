@@ -22,9 +22,9 @@
         Print comments
       </label>
 
-      <button id="expand" title="Open in a larger, resizable window">⤢</button>
       <button id="printOne" disabled>Print first sheet</button>
       <button id="printAll" class="primary" disabled>Print all</button>
+      <button id="expand" title="Open in a larger, resizable window">⤢</button>
     </div>
 
     <!-- Both dropdowns are populated by popup.js from the size lists in
@@ -33,6 +33,13 @@
       <label class="field">
         Font size
         <select id="fontSize"></select> pt
+      </label>
+
+      <!-- The escape hatch, deliberately NOT persisted: the five stored
+           preferences stay exactly five. Full explanation in the tooltip. -->
+      <label class="field" title="Skip NerdPerfect's cleanup and print the page with Chrome's own rendering (still fixes the trailing blank page). For this popup only — not saved.">
+        <input id="native" type="checkbox">
+        Browser-native print
       </label>
 
       <span class="spacer"></span>
@@ -58,14 +65,6 @@
       </label>
     </div>
 
-    <!-- Escape hatch for pages the cleanup handles badly. Deliberately
-         NOT persisted: the five stored preferences stay exactly five. -->
-    <div class="controlsRow">
-      <label class="field" title="Skip NerdPerfect's cleanup and print the page with Chrome's own rendering (still fixes the trailing blank page). For this popup only — not saved.">
-        <input id="native" type="checkbox">
-        Print with browser's native engine (for pages this extension handles badly)
-      </label>
-    </div>
   </header>
 
   <!-- One-line status: what's being previewed, page estimate, warnings -->
