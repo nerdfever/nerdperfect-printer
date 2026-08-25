@@ -3,7 +3,7 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
-## 1.13 — in progress (testing as 1.12.x builds)
+## 1.13 — 2026-08-25
 
 - New escape hatch in the popup: "Print with browser's native engine",
   for the occasional page NerdPerfect handles badly. Chrome renders the
