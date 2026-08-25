@@ -161,6 +161,16 @@ button:disabled {
 /* Preview area                                                               */
 /* ------------------------------------------------------------------------- */
 
+/* Native-mode notice, shown in place of the sheet stack (Chrome offers
+   no way to render its own print layout outside the print dialog). */
+#nativeNotice {
+  padding: 28px 24px;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 34em;
+}
+
 #previewArea {
   flex: 1;
   overflow: auto;

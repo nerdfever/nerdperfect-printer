@@ -5,6 +5,15 @@ All notable changes, newest first. Written entirely by Claude
 
 ## 1.13 — in progress (testing as 1.12.x builds)
 
+- New escape hatch in the popup: "Print with browser's native engine",
+  for the occasional page NerdPerfect handles badly. Chrome renders the
+  page its own way (the print dialog shows that preview), with one
+  repair applied: the usual cause of a trailing blank page is removed.
+  The choice isn't saved — each popup starts fresh, and the five stored
+  preferences stay exactly five.
+- The right-click menu items no longer carry the version number (the
+  popup title still does).
+
 - Sign-up boxes and other interactive forms no longer print in
   whole-page mode: small forms vanish entirely (their hidden inputs
   were leaving stray bullet markers and empty boxes on paper — seen on

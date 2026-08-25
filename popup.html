@@ -57,6 +57,15 @@
         <select id="paper"></select>
       </label>
     </div>
+
+    <!-- Escape hatch for pages the cleanup handles badly. Deliberately
+         NOT persisted: the five stored preferences stay exactly five. -->
+    <div class="controlsRow">
+      <label class="field" title="Skip NerdPerfect's cleanup and print the page with Chrome's own rendering (still fixes the trailing blank page). For this popup only — not saved.">
+        <input id="native" type="checkbox">
+        Print with browser's native engine (for pages this extension handles badly)
+      </label>
+    </div>
   </header>
 
   <!-- One-line status: what's being previewed, page estimate, warnings -->
@@ -66,6 +75,15 @@
   <div id="previewArea">
     <div id="sheetWrap">
       <iframe id="preview" title="Print preview"></iframe>
+    </div>
+
+    <!-- Shown instead of the sheets in native mode: Chrome offers no way
+         to render its own print layout outside the print dialog. -->
+    <div id="nativeNotice" hidden>
+      <p><strong>Browser-native print.</strong></p>
+      <p>The page prints exactly as Chrome renders it — the print dialog
+      itself shows the preview. NerdPerfect only removes the usual cause
+      of a trailing blank page.</p>
     </div>
   </div>
 

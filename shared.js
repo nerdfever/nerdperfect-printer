@@ -729,6 +729,39 @@ async function spPrintInPage(job) {
 
 
 // ---------------------------------------------------------------------------
+// Native printing — the escape hatch for pages our cleanup handles badly:
+// Chrome's own rendering of the page, untouched except for one repair.
+// ---------------------------------------------------------------------------
+
+// Runs INSIDE the target page (injected via executeScript, so it must be
+// fully self-contained). Opens the browser's native print dialog on the
+// page as-is, with print-only CSS that removes the usual causes of a
+// trailing blank page: viewport-height html/body boxes, and the last
+// element's bottom margin tipping a hair onto one more page.
+function spNativePrintInPage() {
+  const style = document.createElement("style");
+  style.textContent =
+    "@media print {\n" +
+    "  html, body { height: auto !important; min-height: 0 !important; }\n" +
+    "  body > :last-child { margin-bottom: 0 !important; }\n" +
+    "}\n";
+  document.documentElement.appendChild(style);
+
+  window.addEventListener("afterprint", () => style.remove(), { once: true });
+
+  window.print();
+}
+
+// Worker side: inject the native printer into the tab.
+async function spNativePrintInTab(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    func: spNativePrintInPage,
+  });
+}
+
+
+// ---------------------------------------------------------------------------
 // Extraction (runs the content scripts in the target tab)
 // ---------------------------------------------------------------------------
 

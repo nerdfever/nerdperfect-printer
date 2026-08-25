@@ -16,6 +16,11 @@ let payload = null;      // extraction result from extract.js
 let settings = null;     // { fontSize, serif, paper, duplex, comments }
 let activeTabId = null;  // the tab we extracted from (and will print in)
 
+// The native-print escape hatch. Deliberately NOT part of settings and
+// never stored: the five synced preferences stay exactly five, and the
+// hatch is a per-page decision anyway.
+let nativeMode = false;
+
 // DOM handles.
 const el = {
   fontSize: document.getElementById("fontSize"),
@@ -23,6 +28,8 @@ const el = {
   paper: document.getElementById("paper"),
   duplex: document.getElementById("duplex"),
   comments: document.getElementById("comments"),
+  native: document.getElementById("native"),
+  nativeNotice: document.getElementById("nativeNotice"),
   expand: document.getElementById("expand"),
   printOne: document.getElementById("printOne"),
   printAll: document.getElementById("printAll"),
@@ -143,6 +150,13 @@ function bindEvents() {
     settings.comments = el.comments.checked;
     spSaveSettings(settings);
     renderPreview();
+  });
+
+  // Native-print escape hatch: swap the whole popup between the two
+  // modes. No save — see the note at the declaration.
+  el.native.addEventListener("change", () => {
+    nativeMode = el.native.checked;
+    updateNativeUI();
   });
 
   // The two print buttons.
@@ -480,6 +494,27 @@ function showStatus(text, flavor) {
   el.status.className = flavor;
 }
 
+// Swap the popup between its two modes. In native mode the layout
+// controls mean nothing (Chrome renders the page its own way), the
+// one-sheet fit can't apply, and no preview is possible — Chrome offers
+// no way to render its print layout outside the print dialog itself.
+function updateNativeUI() {
+  el.fontSize.disabled = nativeMode;
+  el.serif.disabled = nativeMode;
+  el.paper.disabled = nativeMode;
+  el.comments.disabled = nativeMode;
+  el.printOne.disabled = nativeMode || !payload;
+
+  el.sheetWrap.hidden = nativeMode;
+  el.nativeNotice.hidden = !nativeMode;
+
+  if (nativeMode) {
+    showStatus("Browser-native print — the print dialog shows the preview.", "");
+  } else if (payload) {
+    renderPreview();
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // One-sheet truncation
@@ -707,6 +742,13 @@ async function printJob(oneSheet) {
   el.printAll.disabled = true;
 
   try {
+    // Native mode: hand the tab to Chrome's own printer and step aside.
+    if (nativeMode) {
+      await chrome.runtime.sendMessage({ type: "print-native", tabId: activeTabId });
+      window.close();
+      return;
+    }
+
     // One-sheet mode: compute the truncated content (null = fits already).
     let contentHtml = null;
     if (oneSheet) {

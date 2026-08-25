@@ -18,23 +18,19 @@ importScripts("shared.js");
 // ---------------------------------------------------------------------------
 
 chrome.runtime.onInstalled.addListener(() => {
-  // The version in the label serves the same job as in the popup title:
-  // confirming WHICH build handles the click. (With a store copy and a
-  // dev copy both installed, the two register identically-named items —
-  // indistinguishable without this.)
-  const version = chrome.runtime.getManifest().version_name;
-
+  // No version in these labels (the popup title carries it) — Dave's
+  // call, 2026-08-25, reverting the 1.10.7 experiment.
   // Recreate from scratch so updates never duplicate entries.
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "smart-print-page",
-      title: `Print page with NerdPerfect Printer ${version}`,
+      title: "Print page with NerdPerfect Printer",
       contexts: ["page"],
     });
 
     chrome.contextMenus.create({
       id: "smart-print-selection",
-      title: `Print selection with NerdPerfect Printer ${version}`,
+      title: "Print selection with NerdPerfect Printer",
       contexts: ["selection"],
     });
   });
@@ -68,6 +64,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "print-in-page") {
     spPrintInTab(msg.tabId, msg.payload, msg.settings, msg.contentHtml);
+    sendResponse(true);
+  }
+
+  // The native escape hatch: Chrome's own rendering of the page.
+  if (msg.type === "print-native") {
+    spNativePrintInTab(msg.tabId);
     sendResponse(true);
   }
 
