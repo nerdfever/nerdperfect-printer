@@ -13,9 +13,13 @@ All notable changes, newest first. Written entirely by Claude
   preferences stay exactly five.
 - The right-click menu items no longer carry the version number (the
   popup title still does).
-- Tidier popup: the checkboxes sit in order of use (Print comments,
-  Browser-native print, force-font), and the expand-window button
-  lives in the top-right corner.
+- Tidier popup: all three checkboxes share the bottom row in order of
+  use (Print comments, Browser-native print, force-font), and the
+  expand-window button lives in the top-right corner.
+- The native-print blank-page repair now measures instead of guessing:
+  it finds where the page's visible content ends, hides everything
+  below that line, and flattens the trailing spacing that tipped onto
+  one more page — it survives the print dialog's margin reflow.
 
 - Sign-up boxes and other interactive forms no longer print — in any
   mode: small forms vanish entirely (their hidden inputs were leaving

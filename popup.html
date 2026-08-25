@@ -17,11 +17,6 @@
 
       <span class="spacer"></span>
 
-      <label class="field">
-        <input id="comments" type="checkbox">
-        Print comments
-      </label>
-
       <button id="printOne" disabled>Print first sheet</button>
       <button id="printAll" class="primary" disabled>Print all</button>
       <button id="expand" title="Open in a larger, resizable window">⤢</button>
@@ -35,13 +30,6 @@
         <select id="fontSize"></select> pt
       </label>
 
-      <!-- The escape hatch, deliberately NOT persisted: the five stored
-           preferences stay exactly five. Full explanation in the tooltip. -->
-      <label class="field" title="Skip NerdPerfect's cleanup and print the page with Chrome's own rendering (still fixes the trailing blank page). For this popup only — not saved.">
-        <input id="native" type="checkbox">
-        Browser-native print
-      </label>
-
       <span class="spacer"></span>
 
       <label class="field" id="duplexField">
@@ -50,7 +38,20 @@
       </label>
     </div>
 
+    <!-- The three checkboxes on one row, ordered by frequency of use. -->
     <div class="controlsRow">
+      <label class="field">
+        <input id="comments" type="checkbox">
+        Print comments
+      </label>
+
+      <!-- The escape hatch, deliberately NOT persisted: the five stored
+           preferences stay exactly five. Full explanation in the tooltip. -->
+      <label class="field" title="Skip NerdPerfect's cleanup and print the page with Chrome's own rendering (still fixes the trailing blank page). For this popup only — not saved.">
+        <input id="native" type="checkbox">
+        Browser-native print
+      </label>
+
       <label class="field">
         <input id="serif" type="checkbox">
         <!-- Text filled in by popup.js from SP_SERIF_STACK, e.g. "Force Georgia font" -->

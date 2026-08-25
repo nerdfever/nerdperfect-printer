@@ -743,19 +743,82 @@ async function spPrintInPage(job) {
 
 // Runs INSIDE the target page (injected via executeScript, so it must be
 // fully self-contained). Opens the browser's native print dialog on the
-// page as-is, with print-only CSS that removes the usual causes of a
-// trailing blank page: viewport-height html/body boxes, and the last
-// element's bottom margin tipping a hair onto one more page.
+// page as-is, with one repair: the trailing blank page. Fixed CSS alone
+// can't do it — the overflow hides in different wrappers on every site,
+// and print reflow (narrower column, taller text) grows it — so the
+// repair MEASURES: find where the visible content really ends, hide
+// everything that sits entirely below that line (empty widget portals,
+// spacer divs), and flatten trailing margins/padding on the elements
+// that end at it. All marks are attributes + one stylesheet, removed
+// again on afterprint.
 function spNativePrintInPage() {
-  const style = document.createElement("style");
+  const doc = document;
+
+  // Where the page's real content ends: the deepest bottom edge of any
+  // visible text or image, in document coordinates.
+  let contentBottom = 0;
+
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const tn = walker.currentNode;
+    if (!tn.data.trim()) continue;
+
+    const range = doc.createRange();
+    range.selectNodeContents(tn);
+    const r = range.getBoundingClientRect();
+    if (r.height > 0) contentBottom = Math.max(contentBottom, r.bottom + window.scrollY);
+  }
+
+  for (const img of doc.images) {
+    const r = img.getBoundingClientRect();
+    if (r.height > 0 && r.width > 2) {
+      contentBottom = Math.max(contentBottom, r.bottom + window.scrollY);
+    }
+  }
+
+  // Mark the trailing junk. Fixed/sticky elements are skipped — their
+  // screen position says nothing about where they print.
+  const marked = [];
+  for (const el of doc.body.querySelectorAll("*")) {
+    const cs = getComputedStyle(el);
+    if (cs.position === "fixed" || cs.position === "sticky") continue;
+
+    const r = el.getBoundingClientRect();
+    const top = r.top + window.scrollY;
+    const bottom = r.bottom + window.scrollY;
+
+    if (top >= contentBottom - 2) {
+      // Entirely below the content — nothing real can be inside.
+      el.setAttribute("data-sp-nptrim", "1");
+      marked.push(el);
+    } else if (bottom >= contentBottom - 2) {
+      // Ends AT the content's end: its bottom padding/margin is the
+      // trailing air that tips onto one more page.
+      el.setAttribute("data-sp-npflat", "1");
+      marked.push(el);
+    }
+  }
+
+  const style = doc.createElement("style");
   style.textContent =
     "@media print {\n" +
     "  html, body { height: auto !important; min-height: 0 !important; }\n" +
-    "  body > :last-child { margin-bottom: 0 !important; }\n" +
+    "  [data-sp-nptrim] { display: none !important; }\n" +
+    "  [data-sp-npflat] { margin-bottom: 0 !important; padding-bottom: 0 !important; }\n" +
     "}\n";
-  document.documentElement.appendChild(style);
+  doc.documentElement.appendChild(style);
 
-  window.addEventListener("afterprint", () => style.remove(), { once: true });
+  window.addEventListener(
+    "afterprint",
+    () => {
+      style.remove();
+      for (const el of marked) {
+        el.removeAttribute("data-sp-nptrim");
+        el.removeAttribute("data-sp-npflat");
+      }
+    },
+    { once: true }
+  );
 
   window.print();
 }
