@@ -3,6 +3,14 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.13 — in progress (testing as 1.12.x builds)
+
+- Sign-up boxes and other interactive forms no longer print in
+  whole-page mode: small forms vanish entirely (their hidden inputs
+  were leaving stray bullet markers and empty boxes on paper — seen on
+  an order-confirmation page), while forms that wrap real content keep
+  the content and lose only the controls.
+
 ## 1.12 — 2026-08-23
 
 - An image that almost fits at the bottom of a page is downscaled a

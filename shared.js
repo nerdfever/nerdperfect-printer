@@ -164,6 +164,24 @@ var SP_IMG_FIT_MIN_SCALE = 0.6;
 var SP_IMG_FIT_SLACK_PX = 8;      // breathing room under the exact gap
 var SP_IMG_FIT_MIN_HEIGHT_PX = 120;  // smaller images never win a page push
 
+// Fallback/comments: interactive form machinery means nothing on paper.
+// print.css hides the controls themselves, but their husks remain —
+// empty list rows print stray bullet markers, fieldset borders box
+// nothing (an order confirmation's "create an account" box). A form or
+// fieldset with less text than this is pure UI and drops whole; a
+// bigger one (some sites wrap entire pages in a form) keeps everything
+// but the controls.
+var SP_FORM_JUNK_MAX_CHARS = 400;
+var SP_FORM_CONTROL_SELECTORS = [
+  "input",
+  "textarea",
+  "select",
+  "button",
+  "datalist",
+  "meter",
+  "progress",
+].join(", ");
+
 // Preview stand-ins: an image whose natural width comes in below this
 // fraction of its stamped (live-rendered) width did not really load —
 // guarded CDNs return tiny error images with HTTP 500 (LA Times), which

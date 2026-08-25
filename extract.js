@@ -148,6 +148,7 @@
     // between comments) and per-comment UI widgetry — neither prints.
     stripAds(container);
     removeMatching(container, SP_SITE_WIDGET_SELECTORS);
+    stripFormJunk(container);   // reply boxes and their husks
 
     // Reddit threads render through the comment template; other sites
     // get their reply indentation rebuilt from the screen offsets.
@@ -790,6 +791,25 @@
     }
   }
 
+  // Interactive form machinery means nothing on paper. print.css hides
+  // the controls, but husks remain: empty list rows print stray bullet
+  // markers, and fieldset borders box nothing (seen on an order
+  // confirmation's "create an account" box). Small forms and fieldsets
+  // drop whole; a big one (some sites wrap the whole page in a form)
+  // loses only its controls, and rows emptied by that lose their markers.
+  function stripFormJunk(root) {
+    for (const box of root.querySelectorAll("form, fieldset")) {
+      const text = (box.textContent || "").replace(/\s+/g, " ").trim();
+      if (text.length < SP_FORM_JUNK_MAX_CHARS) box.remove();
+    }
+
+    removeMatching(root, SP_FORM_CONTROL_SELECTORS);
+
+    for (const el of root.querySelectorAll("li, label")) {
+      if (!(el.textContent || "").trim() && !el.querySelector("img")) el.remove();
+    }
+  }
+
   // Sites can render the same picture twice — zoom/lightbox twins
   // stacked exactly on the visible copy, so both pass every visibility
   // test (Reddit post images). On paper one copy is right: drop
@@ -983,6 +1003,7 @@
     stripComments(bodyClone);
     stripAds(bodyClone);
     removeMatching(bodyClone, SP_SITE_WIDGET_SELECTORS);
+    stripFormJunk(bodyClone);
 
     // On a reddit post page, the body reduces to the post itself.
     normalizeRedditPost(bodyClone);
