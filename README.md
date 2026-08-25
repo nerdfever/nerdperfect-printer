@@ -63,8 +63,15 @@ Chrome's own print flow. Use the toolbar icon or context menu.
   threads are appended after the article under a "Comments" heading.
   Only comments already loaded on the page can be printed — on sites
   that load more comments as you scroll, scroll through them first.
+- **Browser-native print** — off by default, and deliberately not
+  remembered (it's a per-page escape hatch). Skips NerdPerfect's cleanup
+  and prints the page exactly as Chrome renders it, for the rare page
+  the cleanup handles badly; the system print dialog shows that preview.
+  NerdPerfect still repairs the trailing blank page native printing
+  often produces.
 
-All five are remembered between uses (synced via your Chrome profile).
+All five of the other settings are remembered between uses (synced via
+your Chrome profile).
 
 ## Known limitations
 

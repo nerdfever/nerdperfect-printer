@@ -39,6 +39,9 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > - Images included, scaled to the page, never split across pages
 > - Source URL and date printed at the end
 > - Right-click menu: "Print page / selection with NerdPerfect Printer"
+> - Escape hatch: a "Browser-native print" checkbox prints the rare
+>   stubborn page with Chrome's own rendering — and still removes the
+>   trailing blank page Chrome often adds
 >
 > **Settings**
 > - *Print comments* (off by default) — appends the page's comment threads
@@ -52,6 +55,11 @@ Copy for the Web Store developer dashboard. Not part of the extension itself.
 > - *Double-sided printer* (on by default) — tells "Print first sheet" how
 >   much fits on one physical sheet: two pages if your printer prints both
 >   sides, one if it doesn't.
+> - *Browser-native print* (off; a per-page choice, never saved) — skips
+>   NerdPerfect's cleanup and prints the page exactly as Chrome renders
+>   it, for the rare page the cleanup handles badly. The print dialog
+>   itself shows that preview. NerdPerfect still removes the trailing
+>   blank page Chrome's own printing often produces.
 >
 > **Private**
 > - Everything runs locally in your browser
