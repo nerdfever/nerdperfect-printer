@@ -14,11 +14,15 @@ All notable changes, newest first. Written entirely by Claude
 - The right-click menu items no longer carry the version number (the
   popup title still does).
 
-- Sign-up boxes and other interactive forms no longer print in
-  whole-page mode: small forms vanish entirely (their hidden inputs
-  were leaving stray bullet markers and empty boxes on paper — seen on
-  an order-confirmation page), while forms that wrap real content keep
+- Sign-up boxes and other interactive forms no longer print — in any
+  mode: small forms vanish entirely (their hidden inputs were leaving
+  stray bullet markers and empty boxes on paper — seen on an
+  order-confirmation page), while forms that wrap real content keep
   the content and lose only the controls.
+- Receipt and confirmation pages print whole. Article extraction used
+  to "succeed" on just the thank-you column and silently drop the
+  order summary; a small parse that leaves real page content behind
+  now prints the full page instead.
 
 ## 1.12 — 2026-08-23
 

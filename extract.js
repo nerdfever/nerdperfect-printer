@@ -434,13 +434,18 @@
     // (Readability strips them itself, so this changes nothing else).
     removeJunk(docClone);
 
-    // Text length of the cleaned, comment-stripped page, captured before
-    // Readability mutates the clone (needed for the sliver check below).
-    const pageTextLen = (docClone.body ? docClone.body.textContent : "").trim().length;
+    // Drop what the page itself marks as non-content. Its size guard
+    // needs a page-text length, measured BEFORE the strip — but the
+    // authoritative pageTextLen for the checks below is measured AFTER,
+    // so site-marked junk (author blurbs) never counts as "content the
+    // parse left behind" (it made the tiny-parse check below misfire).
+    const prelimTextLen = (docClone.body ? docClone.body.textContent : "").trim().length;
+    stripNoSnippet(docClone, prelimTextLen);
 
-    // Drop what the page itself marks as non-content (needs pageTextLen
-    // for its size guard, so it runs after the measurement).
-    stripNoSnippet(docClone, pageTextLen);
+    // Text length of the cleaned page, captured before Readability
+    // mutates the clone (the sliver and tiny-parse checks below compare
+    // against it).
+    const pageTextLen = (docClone.body ? docClone.body.textContent : "").trim().length;
 
     // Listing pages (search results, shop grids) must never reach
     // Readability at all — it mangles them (stripping images and title
@@ -497,6 +502,17 @@
       return null;
     }
 
+    // A tiny parse must account for nearly the whole page. A short
+    // "article" that leaves real text behind is usually a receipt or
+    // confirmation page whose side column (the order summary) matters
+    // as much as the body — print the whole page instead.
+    if (
+      articleTextLen < SP_TINY_ARTICLE_CHARS &&
+      articleTextLen < SP_TINY_ARTICLE_MIN_SHARE * pageTextLen
+    ) {
+      return null;
+    }
+
     // Strip comment containers AGAIN on the extracted markup (belt and
     // suspenders), then absolutize what Readability may have missed.
     const holder = document.createElement("template");
@@ -504,6 +520,10 @@
     stripComments(holder.content);
     stripAds(holder.content);
     removeJunk(holder.content);
+
+    // Articles carry forms too (newsletter sign-up boxes, embedded
+    // search) — same husk problem as fallback pages, same cure.
+    stripFormJunk(holder.content);
 
     // A "successful" parse where most of the text lives inside links is a
     // results/listing page, not an article — Amazon searches sail past the

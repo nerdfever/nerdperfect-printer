@@ -164,6 +164,14 @@ var SP_IMG_FIT_MIN_SCALE = 0.6;
 var SP_IMG_FIT_SLACK_PX = 8;      // breathing room under the exact gap
 var SP_IMG_FIT_MIN_HEIGHT_PX = 120;  // smaller images never win a page push
 
+// A "successful" Readability parse this small, that still leaves a real
+// share of the page's text behind, isn't an article pulled out of
+// clutter — it's a receipt or confirmation page being mutilated (the
+// harmonycr order confirmation: body column parsed, order-summary
+// column silently dropped). Such pages print whole instead.
+var SP_TINY_ARTICLE_CHARS = 1200;      // parses below this are suspect...
+var SP_TINY_ARTICLE_MIN_SHARE = 0.85;  // ...unless they hold this much of the page
+
 // Fallback/comments: interactive form machinery means nothing on paper.
 // print.css hides the controls themselves, but their husks remain —
 // empty list rows print stray bullet markers, fieldset borders box
