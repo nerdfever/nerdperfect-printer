@@ -92,9 +92,12 @@
   }
 
   // Safety-net comment stripping (full-article/fallback modes ONLY —
-  // never for selections). Selector list lives in shared.js.
+  // never for selections). Selectors and the container test live in
+  // shared.js (spFindCommentContainers).
   function stripComments(root) {
-    removeMatching(root, SP_COMMENT_SELECTORS);
+    for (const el of spFindCommentContainers(root)) {
+      el.remove();
+    }
   }
 
   // Strip injected ad units (full-article/fallback modes only). Selector
@@ -122,11 +125,7 @@
   // like comment-count buttons. Only comments already loaded in the DOM
   // can be captured — lazy-loaded tails don't exist yet.
   function extractComments() {
-    const tops = [];
-    for (const el of document.querySelectorAll(SP_COMMENT_SELECTORS)) {
-      if (tops.some((prev) => prev.contains(el))) continue;
-      tops.push(el);
-    }
+    const tops = spFindCommentContainers(document);
 
     const container = document.createElement("div");
     for (const el of tops) {

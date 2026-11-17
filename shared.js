@@ -47,6 +47,11 @@ var SP_FALLBACK_STACK = "system-ui, sans-serif";
 
 // Known comment containers, stripped as a safety net in full-article mode
 // (Readability drops most comments already). NEVER applied in selection mode.
+// The two substring selectors at the end only FIND candidates; each match
+// must then pass spIsCommentContainer below, because a raw substring hit
+// on "comment" also catches "commentary" — Ghost stamps every post tag on
+// <body> and <article> as a class, so a post tagged "social-commentary"
+// (Quillette) lost its entire article.
 var SP_COMMENT_SELECTORS = [
   "#comments",
   "#respond",
@@ -59,6 +64,52 @@ var SP_COMMENT_SELECTORS = [
   '[class*="comment"]',
   '[id*="comment"]',
 ].join(", ");
+
+// A class or id names a comment container when it contains "comment" in
+// any form EXCEPT the commentary / commentator / commentate family — those
+// are editorial words (post tags, section names), not reader comments.
+// Old run-together names like WordPress's "commentlist" still qualify.
+var SP_COMMENT_WORD = /comment(?!ar|at)/i;
+
+// Elements that are never comment containers, whatever their classes say:
+// the page itself and its main-content landmark.
+var SP_NEVER_COMMENT_TAGS = ["HTML", "BODY", "MAIN"];
+
+// Does this SP_COMMENT_SELECTORS match really hold comments? `pageTitle`
+// is the page's main <h1> (or null): anything wrapping it is the article,
+// even when a CMS class like "tag-comments" says otherwise.
+function spIsCommentContainer(el, pageTitle) {
+  // The page and its main landmark are never comment containers.
+  if (SP_NEVER_COMMENT_TAGS.includes(el.tagName)) return false;
+
+  // Neither is anything holding the article's own headline.
+  if (pageTitle && el.contains(pageTitle)) return false;
+
+  // "comment" (not "commentary") in a class or the id is the real signal.
+  const names = [...el.classList, el.id || ""];
+
+  if (names.some((name) => SP_COMMENT_WORD.test(name))) return true;
+
+  // Otherwise it was matched by one of the named selectors (#respond,
+  // #disqus_thread), which are specific enough to trust as they are.
+  return !el.matches('[class*="comment"], [id*="comment"]');
+}
+
+// Every true comment container under `root` (a document, element, or
+// fragment), outermost first, skipping matches nested inside another.
+function spFindCommentContainers(root) {
+  const pageTitle = root.querySelector("h1");
+  const tops = [];
+
+  for (const el of root.querySelectorAll(SP_COMMENT_SELECTORS)) {
+    // Already inside a container we're taking whole.
+    if (tops.some((prev) => prev.contains(el))) continue;
+
+    if (spIsCommentContainer(el, pageTitle)) tops.push(el);
+  }
+
+  return tops;
+}
 
 // Known ad-network containers, stripped before Readability runs (and from
 // fallback renderings). Beyond wasting ink, a big injected ad unit inside

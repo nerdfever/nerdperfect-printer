@@ -3,6 +3,16 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.13.1 — 2026-11-17
+
+- Articles whose site tags them as "commentary" print again. The
+  comment-section filter matched any class containing "comment", and
+  some blog platforms (Ghost, used by Quillette) label the whole article
+  with its tags — so a post tagged "social-commentary" was removed as
+  if it were the comments, leaving a near-empty printout. The filter
+  now ignores commentary/commentator, and never removes anything that
+  holds the article's headline.
+
 ## 1.13 — 2026-08-25
 
 - New escape hatch in the popup: "Print with browser's native engine",
