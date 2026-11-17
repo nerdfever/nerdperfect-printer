@@ -3,6 +3,12 @@
 All notable changes, newest first. Written entirely by Claude
 (Anthropic's AI), directed and published by [nerdfever.com](https://nerdfever.com).
 
+## 1.13.2 — 2026-11-17
+
+- Inline event handlers (onerror, onclick…) are stripped from the
+  printout. They never did anything on paper; in the preview the
+  browser blocked them and logged a security error for each one.
+
 ## 1.13.1 — 2026-11-17
 
 - Articles whose site tags them as "commentary" print again. The
@@ -12,9 +18,6 @@ All notable changes, newest first. Written entirely by Claude
   if it were the comments, leaving a near-empty printout. The filter
   now ignores commentary/commentator, and never removes anything that
   holds the article's headline.
-- Inline event handlers (onerror, onclick…) are stripped from the
-  printout. They never did anything on paper; in the preview the
-  browser blocked them and logged a security error for each one.
 
 ## 1.13 — 2026-08-25
 
