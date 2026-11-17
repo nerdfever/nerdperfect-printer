@@ -82,6 +82,15 @@
     for (const el of root.querySelectorAll("script, style, noscript, template, link")) {
       el.remove();
     }
+
+    // Inline event handlers (onerror, onclick, ...) mean nothing on paper,
+    // and the popup preview's CSP refuses them — each one logged an error
+    // on the extension's card (Ghost's author-avatar img onerror, Quillette).
+    for (const el of root.querySelectorAll("*")) {
+      for (const attr of [...el.attributes]) {
+        if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+      }
+    }
   }
 
   // Remove every element in a subtree matching a selector list.

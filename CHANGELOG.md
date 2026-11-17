@@ -12,6 +12,9 @@ All notable changes, newest first. Written entirely by Claude
   if it were the comments, leaving a near-empty printout. The filter
   now ignores commentary/commentator, and never removes anything that
   holds the article's headline.
+- Inline event handlers (onerror, onclick…) are stripped from the
+  printout. They never did anything on paper; in the preview the
+  browser blocked them and logged a security error for each one.
 
 ## 1.13 — 2026-08-25
 
